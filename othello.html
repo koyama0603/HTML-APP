@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>OTHELLO</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold:#e7b75a; --gold-2:#f7d98a;
+  --green-a:#105f3e; --green-b:#073b28; --green-c:#0e7b4f;
+  --wood-a:#6a3f1f; --wood-b:#2f1a0d;
+  --board-size:560px;
+}
+html,body { width:100%;height:100%;overflow:hidden;
+  background:radial-gradient(circle at 20% 12%,rgba(231,183,90,.25),transparent 24%),
+    radial-gradient(circle at 82% 20%,rgba(53,200,120,.18),transparent 26%),
+    linear-gradient(135deg,#06120e 0%,#0b2018 46%,#040806 100%);
+  font-family:"Helvetica Neue",Arial,sans-serif; }
+body { display:flex;align-items:center;justify-content:center; }
+#app-root { width:1100px;height:760px;transform-origin:center center;flex-shrink:0; }
+.app { width:100%;height:100%;padding:18px;display:grid;
+  grid-template-columns:718px 1fr;gap:18px;position:relative; }
+.board-card,.side { border:1px solid rgba(255,255,255,.16);border-radius:28px;
+  box-shadow:0 30px 88px rgba(0,0,0,.38);backdrop-filter:blur(14px); }
+.board-card { padding:22px;display:grid;grid-template-rows:auto 1fr;
+  background:linear-gradient(180deg,rgba(246,241,226,.96),rgba(231,224,204,.92));overflow:hidden; }
+.topbar { min-height:58px;display:flex;justify-content:space-between;align-items:center;
+  gap:16px;margin-bottom:14px; }
+.title-wrap { display:flex;align-items:baseline;gap:14px; }
+h1 { font-size:44px;line-height:1;letter-spacing:.12em;font-weight:900;color:#111b16; }
+.mode-label { color:#708078;font-size:13px;font-weight:800;letter-spacing:.12em; }
+.turn-pill { min-width:146px;min-height:44px;padding:8px 16px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(21,33,26,.08);border:1px solid rgba(21,33,26,.12);
+  color:#18261d;font-size:15px;font-weight:900;white-space:nowrap; }
+.turn-pill.active { background:linear-gradient(135deg,rgba(247,217,138,.95),rgba(231,183,90,.82));
+  box-shadow:0 8px 18px rgba(92,55,16,.16); }
+.thinking::after { content:"";display:inline-block;width:1.2em;text-align:left;
+  animation:dots 1s steps(4,end) infinite; }
+@keyframes dots { 0%{content:""}25%{content:"."}50%{content:".."}75%,100%{content:"..."} }
+.board-stage { height:100%;display:grid;place-items:center;position:relative; }
+/* board shell はcanvasと同じ親 */
+.board-wrap { position:relative;width:var(--board-size);aspect-ratio:1/1; }
+.board-shell { position:absolute;inset:0;padding:18px;border-radius:28px;
+  background:radial-gradient(circle at 30% 24%,rgba(255,255,255,.22),transparent 16%),
+    linear-gradient(135deg,var(--wood-a),var(--wood-b));
+  box-shadow:inset 0 0 0 2px rgba(255,234,176,.24),inset 0 0 34px rgba(0,0,0,.25),
+    0 26px 50px rgba(0,0,0,.33); }
+.board-shell::before { content:"";position:absolute;inset:9px;border-radius:22px;
+  border:1px solid rgba(255,240,199,.18);pointer-events:none; }
+/* ゲームキャンバス – ボード全体を1枚で描く */
+#gameCanvas { position:absolute;inset:18px;border-radius:16px;
+  width:calc(100% - 36px);height:calc(100% - 36px);cursor:pointer;touch-action:manipulation; }
+/* result overlay */
+.result-overlay { position:absolute;inset:18px;display:none;align-items:center;
+  justify-content:center;border-radius:28px;background:rgba(5,12,9,.65);
+  backdrop-filter:blur(8px);z-index:30;overflow:hidden; }
+.result-overlay.show { display:flex; }
+.result-card { width:390px;max-width:86%;padding:32px 28px;border-radius:28px;
+  text-align:center;background:rgba(246,241,226,.97);color:#14201a;
+  box-shadow:0 30px 90px rgba(0,0,0,.48);border:1px solid rgba(255,255,255,.7);
+  position:relative;z-index:2; }
+.result-card h2 { font-size:52px;letter-spacing:.08em;line-height:1;margin-bottom:10px; }
+.result-card p { color:#5f6d65;font-weight:800;margin-bottom:20px;font-size:16px; }
+.result-overlay.win .result-card { animation:winPop .62s cubic-bezier(.18,1.35,.3,1) both; }
+.result-overlay.lose .result-card { animation:loseDrop .5s ease-out both; }
+.result-overlay.draw .result-card { animation:winPop .5s ease-out both; }
+@keyframes winPop { from{transform:scale(.68);opacity:0}to{transform:scale(1);opacity:1} }
+@keyframes loseDrop { from{transform:translateY(-22px);opacity:0}to{transform:translateY(0);opacity:1} }
+.confetti,.rain { position:absolute;width:10px;height:15px;border-radius:3px;
+  left:var(--x);top:-18px;background:var(--c);
+  animation:confettiFall var(--d) linear both;opacity:.95; }
+.rain { width:4px;height:28px;border-radius:999px;background:rgba(180,210,255,.65);animation-name:rainFall; }
+@keyframes confettiFall { 0%{transform:translateY(-20px) rotate(0deg)}100%{transform:translateY(800px) rotate(820deg)} }
+@keyframes rainFall { 0%{transform:translateY(-40px);opacity:0}12%{opacity:.9}100%{transform:translateY(800px);opacity:0} }
+.shake-win { animation:boardCelebrate .8s ease both; }
+.shake-lose { animation:boardLose .65s ease both; }
+@keyframes boardCelebrate {
+  0%,100%{transform:scale(1)}18%{transform:scale(1.016) rotate(-.7deg)}
+  40%{transform:scale(1.022) rotate(.7deg)}62%{transform:scale(1.010) rotate(-.3deg)} }
+@keyframes boardLose {
+  0%,100%{transform:translateX(0)}16%{transform:translateX(-8px)}
+  33%{transform:translateX(7px)}50%{transform:translateX(-5px)}66%{transform:translateX(4px)} }
+/* flash */
+.flash-overlay { position:fixed;inset:0;pointer-events:none;z-index:100; }
+.flash-overlay.flash-win { animation:flashWin .7s ease-out both; }
+.flash-overlay.flash-lose { animation:flashLose .5s ease-out both; }
+@keyframes flashWin { 0%{background:rgba(247,217,138,.42)}100%{background:rgba(247,217,138,0)} }
+@keyframes flashLose { 0%{background:rgba(100,60,60,.38)}100%{background:rgba(100,60,60,0)} }
+/* side panel */
+.side { background:rgba(20,34,27,.92);padding:18px;display:grid;
+  grid-template-rows:auto auto auto 1fr auto;gap:14px;color:#f7f0dd;overflow:hidden; }
+.score-card { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.score-box { min-height:112px;padding:14px 12px;border-radius:22px;display:grid;
+  place-items:center;gap:6px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.11); }
+.score-label { display:flex;align-items:center;gap:8px;color:rgba(247,240,221,.74);
+  font-size:13px;font-weight:900;letter-spacing:.08em; }
+.mini-disc { width:18px;height:18px;border-radius:50%;box-shadow:0 2px 5px rgba(0,0,0,.35); }
+.mini-disc.black { background:radial-gradient(circle at 30% 22%,rgba(255,255,255,.23),transparent 34%),
+  radial-gradient(circle at 30% 22%,#59636b 0%,#151a1f 34%,#000 100%);border:1px solid rgba(255,255,255,.2); }
+.mini-disc.white { background:radial-gradient(circle at 30% 22%,#fff 0%,#fff8e8 42%,#cfc9bb 100%);
+  border:1px solid rgba(0,0,0,.25); }
+.score-num { font-size:42px;line-height:1;font-weight:900;font-variant-numeric:tabular-nums; }
+.score-num.pop { animation:scorePop .22s cubic-bezier(.18,1.6,.3,1) both; }
+@keyframes scorePop { 0%{transform:scale(1)}50%{transform:scale(1.32)}100%{transform:scale(1)} }
+.control-card { padding:14px;border-radius:22px;background:rgba(255,255,255,.065);
+  border:1px solid rgba(255,255,255,.11);display:grid;gap:10px; }
+.control-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+label.control { display:grid;gap:7px;color:rgba(247,240,221,.72);font-size:12px;
+  font-weight:900;letter-spacing:.08em; }
+select,button { min-height:42px;border:0;border-radius:14px;padding:10px 12px;font:inherit;font-weight:900; }
+select { width:100%;background:rgba(255,255,255,.94);color:#14201a; }
+button { color:#14201a;background:linear-gradient(180deg,#f1c56c,#e5a93f);cursor:pointer;
+  box-shadow:0 5px 0 rgba(73,48,18,.42);transition:transform .08s,filter .15s,box-shadow .08s; }
+button:hover{filter:brightness(1.05)}
+button:active{transform:translateY(2px);box-shadow:0 3px 0 rgba(73,48,18,.42)}
+button.secondary{background:linear-gradient(180deg,#edf3ee,#cfdad3)}
+button.sound{background:linear-gradient(180deg,#d8f4e1,#99d9ae)}
+button.off{background:linear-gradient(180deg,#f1d0cc,#d78375)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.button-row,.sound-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.status-card { min-height:92px;padding:16px;border-radius:22px;
+  background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.11);
+  color:#fff6dc;display:grid;align-content:center;gap:8px; }
+.status-main{font-size:22px;line-height:1.2;font-weight:900}
+.status-sub{min-height:19px;font-size:13px;color:rgba(247,240,221,.66)}
+.thinking-bar{height:3px;width:100%;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.15);margin-top:4px}
+.thinking-bar-fill{height:100%;width:0%;border-radius:999px;
+  background:linear-gradient(90deg,var(--gold),var(--gold-2));
+  animation:thinkProgress 2.2s ease-in-out infinite}
+@keyframes thinkProgress{0%{width:0%;opacity:.8}60%{width:78%;opacity:1}100%{width:100%;opacity:.5}}
+.meter-card{padding:14px;border-radius:22px;background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.1);display:grid;gap:10px}
+.advantage{height:16px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.2);
+  display:flex;box-shadow:inset 0 1px 4px rgba(0,0,0,.35)}
+.adv-black{background:#06090c;width:50%;transition:width .3s ease}
+.adv-white{background:#fff8e8;flex:1}
+.tiny-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;
+  color:rgba(247,240,221,.62);font-weight:800}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important}}
+</style>
+</head>
+<body tabindex="0">
+<div id="flash-overlay" class="flash-overlay"></div>
+<div id="app-root">
+<main class="app" aria-label="Othello game">
+  <section class="board-card">
+    <div class="topbar">
+      <div class="title-wrap"><h1>OTHELLO</h1><div class="mode-label">VS CPU</div></div>
+      <div class="turn-pill" id="turnPill">READY</div>
+    </div>
+    <div class="board-stage">
+      <div class="board-wrap" id="boardWrap">
+        <div class="board-shell" id="boardShell"></div>
+        <canvas id="gameCanvas" width="524" height="524" aria-label="オセロ盤"></canvas>
+        <div class="result-overlay" id="resultOverlay" aria-hidden="true">
+          <div class="result-card">
+            <h2 id="resultTitle">WIN</h2>
+            <p id="resultText">BLACK 0 – WHITE 0</p>
+            <button id="nextBtn" type="button">NEW GAME</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <aside class="side">
+    <section class="score-card">
+      <div class="score-box">
+        <div class="score-label"><span class="mini-disc black"></span>BLACK</div>
+        <div class="score-num" id="blackScore">2</div>
+      </div>
+      <div class="score-box">
+        <div class="score-label"><span class="mini-disc white"></span>WHITE</div>
+        <div class="score-num" id="whiteScore">2</div>
+      </div>
+    </section>
+    <section class="control-card">
+      <div class="control-grid">
+        <label class="control">SIDE
+          <select id="sideSelect"><option value="black">黒で先攻</option><option value="white">白で後攻</option></select>
+        </label>
+        <label class="control">CPU
+          <select id="levelSelect">
+            <option value="easy">やさしい</option>
+            <option value="normal" selected>ふつう</option>
+            <option value="hard">つよい</option>
+          </select>
+        </label>
+      </div>
+      <div class="button-row">
+        <button id="startBtn" type="button">START</button>
+        <button id="resetBtn" class="secondary" type="button">RESET</button>
+      </div>
+      <div class="sound-row">
+        <button id="musicBtn" class="sound" type="button">♪ BGM ON</button>
+        <button id="sfxBtn"   class="sound" type="button">🔊 SFX ON</button>
+      </div>
+    </section>
+    <section class="status-card" aria-live="polite">
+      <div class="status-main" id="statusMain">STARTで開始</div>
+      <div class="status-sub"  id="statusSub">置けるマスが光ります。</div>
+      <div class="thinking-bar" id="thinkBar" style="display:none"><div class="thinking-bar-fill"></div></div>
+    </section>
+    <section class="meter-card">
+      <div class="advantage"><div class="adv-black" id="advBlack"></div><div class="adv-white"></div></div>
+      <div class="tiny-row"><span id="emptyCount">EMPTY 60</span><span id="moveCount">MOVE 0</span></div>
+    </section>
+    <div></div>
+  </aside>
+</main>
+</div>
+
+<script>
+"use strict";
+window.addEventListener("error", e => console.error("Error:", e.message, e.lineno));
+
+// ── constants ──
+const EMPTY=0,BLACK=1,WHITE=-1,SIZE=8;
+const DIRS=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+const PW=[[120,-28,24,8,8,24,-28,120],[-28,-70,-12,-10,-10,-12,-70,-28],
+  [24,-12,16,4,4,16,-12,24],[8,-10,4,2,2,4,-10,8],
+  [8,-10,4,2,2,4,-10,8],[24,-12,16,4,4,16,-12,24],
+  [-28,-70,-12,-10,-10,-12,-70,-28],[120,-28,24,8,8,24,-28,120]];
+
+// ── DOM ──
+const canvas       = document.getElementById("gameCanvas");
+const ctx          = canvas.getContext("2d");
+const boardShell   = document.getElementById("boardShell");
+const turnPill     = document.getElementById("turnPill");
+const blackScoreEl = document.getElementById("blackScore");
+const whiteScoreEl = document.getElementById("whiteScore");
+const statusMain   = document.getElementById("statusMain");
+const statusSub    = document.getElementById("statusSub");
+const thinkBar     = document.getElementById("thinkBar");
+const startBtn     = document.getElementById("startBtn");
+const resetBtn     = document.getElementById("resetBtn");
+const sideSelect   = document.getElementById("sideSelect");
+const levelSelect  = document.getElementById("levelSelect");
+const musicBtn     = document.getElementById("musicBtn");
+const sfxBtn       = document.getElementById("sfxBtn");
+const resultOverlay= document.getElementById("resultOverlay");
+const resultTitle  = document.getElementById("resultTitle");
+const resultText   = document.getElementById("resultText");
+const nextBtn      = document.getElementById("nextBtn");
+const advBlack     = document.getElementById("advBlack");
+const emptyCountEl = document.getElementById("emptyCount");
+const moveCountEl  = document.getElementById("moveCount");
+const flashOverlay = document.getElementById("flash-overlay");
+
+// ── canvas sizing ──
+const CW = canvas.width, CH = canvas.height;
+const CELL = CW / SIZE;
+const PAD  = CELL * 0.10;
+const R    = CELL / 2 - PAD;
+
+// ── game state ──
+let board, currentPlayer, humanColor, computerColor, level;
+let playing=false, busy=false, lastMove=null, moveNumber=0;
+let prevBlack=2, prevWhite=2;
+let legalMoves=[];
+
+// ── disc animation state ──
+// Each cell can have an animated disc object:
+// { color, phase: 'idle'|'place'|'flip', t: 0..1, fromColor, toColor }
+let discAnim = [];   // [y][x]
+let animRAF = null;
+let animPending = [];  // queued flip animations
+
+function initDiscAnim() {
+  discAnim = Array.from({length:SIZE}, () => Array.from({length:SIZE}, () => null));
+}
+
+// ── storage ──
+function sGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function sSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+
+// ── board logic ──
+function createBoard(){
+  const b=Array.from({length:SIZE},()=>Array(SIZE).fill(EMPTY));
+  b[3][3]=WHITE;b[3][4]=BLACK;b[4][3]=BLACK;b[4][4]=WHITE;return b;
+}
+function copyBoard(src){return src.map(r=>r.slice())}
+function inBounds(x,y){return x>=0&&x<SIZE&&y>=0&&y<SIZE}
+function colorName(c){return c===BLACK?"黒":"白"}
+function getFlips(b,x,y,color){
+  if(!inBounds(x,y)||b[y][x]!==EMPTY)return[];
+  const opp=-color,flips=[];
+  for(const[dx,dy]of DIRS){
+    let nx=x+dx,ny=y+dy;const line=[];
+    while(inBounds(nx,ny)&&b[ny][nx]===opp){line.push([nx,ny]);nx+=dx;ny+=dy;}
+    if(line.length>0&&inBounds(nx,ny)&&b[ny][nx]===color)flips.push(...line);
+  }
+  return flips;
+}
+function getLegalMoves(b,color){
+  const moves=[];
+  for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
+    const f=getFlips(b,x,y,color);if(f.length>0)moves.push({x,y,flips:f});
+  }
+  return moves;
+}
+function applyMove(b,move,color){
+  const next=copyBoard(b);
+  next[move.y][move.x]=color;
+  for(const[fx,fy]of move.flips)next[fy][fx]=color;
+  return next;
+}
+function countPieces(b=board){
+  let black=0,white=0,empty=0;
+  for(const row of b)for(const c of row){if(c===BLACK)black++;else if(c===WHITE)white++;else empty++;}
+  return{black,white,empty};
+}
+function isGameOver(b=board){
+  return getLegalMoves(b,BLACK).length===0&&getLegalMoves(b,WHITE).length===0;
+}
+
+// ══════════════════════════════════════════════════════════
+// CANVAS DRAW ENGINE
+// ══════════════════════════════════════════════════════════
+
+function drawCell(x, y, isLegal, isLast) {
+  const cx = x * CELL, cy = y * CELL;
+  // green cell (no roundRect — use fillRect for compatibility)
+  const grd = ctx.createLinearGradient(cx, cy, cx+CELL, cy+CELL);
+  grd.addColorStop(0,  "#0e7b4f");
+  grd.addColorStop(0.5,"#105f3e");
+  grd.addColorStop(1,  "#073b28");
+  ctx.fillStyle = grd;
+  ctx.fillRect(cx+1, cy+1, CELL-2, CELL-2);
+  // last move glow
+  if (isLast) {
+    ctx.strokeStyle = "rgba(247,217,138,0.85)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(cx+2, cy+2, CELL-4, CELL-4);
+  }
+  // legal dot
+  if (isLegal) {
+    const pulse = 0.55 + 0.35 * Math.sin(Date.now() / 400);
+    ctx.fillStyle = `rgba(247,217,138,${pulse})`;
+    ctx.beginPath();
+    ctx.arc(cx + CELL/2, cy + CELL/2, R * 0.28, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(247,217,138,${pulse * 0.4})`;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(cx + CELL/2, cy + CELL/2, R * 0.42, 0, Math.PI*2);
+    ctx.stroke();
+  }
+}
+
+// Draw a disc using scaleX to simulate 3D coin flip.
+// scaleX: 1=full face, 0=edge (mid-flip), -1=opposite face full
+// We use color switching at scaleX=0.
+// Draw a disc at absolute canvas position (cx,cy).
+// flipScaleX: 1=full front, 0=edge (mid-flip), -1=full back (other color)
+function drawDisc(cx, cy, color, flipScaleX) {
+  const absX = Math.abs(flipScaleX);
+  // which face is showing?
+  const faceColor = flipScaleX >= 0 ? color : (color === BLACK ? WHITE : BLACK);
+  const isBlack = faceColor === BLACK;
+  const rw = R * absX;  // horizontal radius shrinks during flip
+  const rh = R * 0.94;
+
+  if (rw < 0.5) {
+    // At the edge — just draw a thin bright line (coin edge)
+    ctx.save();
+    ctx.fillStyle = "rgba(255,248,200,0.92)";
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, Math.max(0.5, rw), rh, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
+  ctx.save();
+  // shadow
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  // body gradient
+  const grad = ctx.createRadialGradient(cx - rw*0.3, cy - rh*0.3, rw*0.04,
+                                         cx,           cy,           Math.max(rw,rh)*1.05);
+  if (isBlack) {
+    grad.addColorStop(0,   "#6a7480");
+    grad.addColorStop(0.28,"#1e2428");
+    grad.addColorStop(0.7, "#0d1114");
+    grad.addColorStop(1,   "#000204");
+  } else {
+    grad.addColorStop(0,   "#ffffff");
+    grad.addColorStop(0.28,"#f0ebe0");
+    grad.addColorStop(0.7, "#d4cfc2");
+    grad.addColorStop(1,   "#b0aca4");
+  }
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rw, rh, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  // rim
+  ctx.strokeStyle = isBlack ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.15)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rw, rh, 0, 0, Math.PI*2);
+  ctx.stroke();
+  // specular
+  const spec = ctx.createRadialGradient(cx - rw*0.28, cy - rh*0.28, 0,
+                                         cx - rw*0.14, cy - rh*0.14, Math.max(rw,rh)*0.62);
+  spec.addColorStop(0,   isBlack ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.92)");
+  spec.addColorStop(0.5, isBlack ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.18)");
+  spec.addColorStop(1,   "rgba(255,255,255,0)");
+  ctx.fillStyle = spec;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rw, rh, 0, 0, Math.PI*2);
+  ctx.fill();
+  // mid-flip edge shimmer
+  if (absX < 0.3) {
+    const ea = (1 - absX/0.3) * 0.85;
+    const eg = ctx.createLinearGradient(cx, cy-rh, cx, cy+rh);
+    eg.addColorStop(0,   `rgba(255,240,180,${ea*0.35})`);
+    eg.addColorStop(0.5, `rgba(255,255,220,${ea})`);
+    eg.addColorStop(1,   `rgba(255,240,180,${ea*0.35})`);
+    ctx.fillStyle = eg;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rw, rh, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ── place animation: disc drops in from above ──
+// t: 0→1
+function drawPlaceAnim(cx, cy, color, t) {
+  const ease = t < 0.6 ? (t/0.6)*(t/0.6)
+    : 1 + Math.sin((t-0.6)/0.4*Math.PI)*0.12*(1-t);
+  const scl = Math.min(1, ease);
+  const yOff = (1 - Math.min(1, t/0.55)) * (-CELL * 0.5);
+  // draw with scaled radii directly (no ctx.scale)
+  const savedR = R;
+  const rScaled = R * scl;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 8 * scl;
+  ctx.shadowOffsetY = 3 * scl;
+  const isBlack = color === BLACK;
+  const grad = ctx.createRadialGradient(
+    cx - rScaled*0.3, cy+yOff - rScaled*0.3, rScaled*0.04,
+    cx, cy+yOff, rScaled*1.05);
+  if (isBlack) {
+    grad.addColorStop(0,"#6a7480"); grad.addColorStop(0.28,"#1e2428");
+    grad.addColorStop(0.7,"#0d1114"); grad.addColorStop(1,"#000204");
+  } else {
+    grad.addColorStop(0,"#ffffff"); grad.addColorStop(0.28,"#f0ebe0");
+    grad.addColorStop(0.7,"#d4cfc2"); grad.addColorStop(1,"#b0aca4");
+  }
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy+yOff, rScaled, rScaled*0.94, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  const spec = ctx.createRadialGradient(
+    cx-rScaled*0.28, cy+yOff-rScaled*0.28, 0,
+    cx-rScaled*0.14, cy+yOff-rScaled*0.14, rScaled*0.62);
+  spec.addColorStop(0, isBlack?"rgba(255,255,255,0.28)":"rgba(255,255,255,0.92)");
+  spec.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = spec;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy+yOff, rScaled, rScaled*0.94, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── flip animation: coin rotates around Y axis ──
+// t: 0→1, fromColor → toColor
+// scaleX: cos(t * PI) → 1 → 0 → -1 (full flip)
+function drawFlipAnim(cx, cy, fromColor, toColor, t) {
+  const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+  const scaleX = Math.cos(ease * Math.PI); // 1→0→-1
+  // pass scaleX directly to drawDisc — it handles face switching at 0
+  drawDisc(cx, cy, fromColor, scaleX);
+}
+
+// ── place burst particles ──
+let particles = [];
+function spawnPlaceParticles(cx, cy, color) {
+  const c = color === BLACK ? "#aab0b8" : "#fff8e0";
+  for (let i = 0; i < 10; i++) {
+    const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.3;
+    const speed = R * (0.8 + Math.random() * 1.4);
+    particles.push({ x:cx, y:cy, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed,
+      r: 2.5+Math.random()*3, life:1, color:c });
+  }
+}
+function updateParticles(dt) {
+  for (const p of particles) {
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vy += 300 * dt; // gravity
+    p.life -= dt * 2.8;
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  particles = particles.filter(p => p.life > 0);
+}
+
+// ── main render loop ──
+let lastRenderTime = 0;
+function renderLoop(ts) {
+  const dt = Math.min(0.05, (ts - lastRenderTime) / 1000);
+  lastRenderTime = ts;
+  try {
+  ctx.setTransform(1,0,0,1,0,0); // reset transform each frame
+  ctx.globalAlpha = 1;
+  ctx.shadowColor = "transparent";
+  ctx.clearRect(0, 0, CW, CH);
+
+  // background
+  ctx.fillStyle = "#062918";
+  ctx.fillRect(0, 0, CW, CH);
+
+  // grid lines
+  ctx.strokeStyle = "rgba(4,25,14,0.9)";
+  ctx.lineWidth = 2;
+  for (let i = 1; i < SIZE; i++) {
+    ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, CH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i*CELL); ctx.lineTo(CW, i*CELL); ctx.stroke();
+  }
+
+  const legalSet = new Set(legalMoves.map(m=>`${m.x},${m.y}`));
+
+  // draw cells
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const isLast = lastMove && lastMove.x===x && lastMove.y===y;
+      drawCell(x, y, legalSet.has(`${x},${y}`), isLast);
+    }
+  }
+
+  // draw discs + animations
+  let anyAnim = false;
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const cx = x*CELL + CELL/2, cy = y*CELL + CELL/2;
+      let anim = discAnim[y][x];
+      if (anim) {
+        anim.t += dt / anim.dur;
+        if (anim.t >= 1) {
+          // animation done — clear and fall through to board draw
+          discAnim[y][x] = null;
+          anim = null;
+        }
+      }
+      if (anim) {
+        anyAnim = true;
+        if (anim.phase === 'place') {
+          drawPlaceAnim(cx, cy, anim.color, anim.t);
+        } else if (anim.phase === 'flip') {
+          drawFlipAnim(cx, cy, anim.fromColor, anim.toColor, anim.t);
+        }
+      } else if (board[y][x] !== EMPTY) {
+        // no animation → draw from board (always correct)
+        drawDisc(cx, cy, board[y][x], 1);
+      }
+    }
+  }
+
+  // particles
+  updateParticles(dt);
+  if (particles.length > 0) anyAnim = true;
+
+  // legal dot pulse (needs continuous redraw)
+  if (legalMoves.length > 0) anyAnim = true;
+
+  } catch(err) {
+    console.error("renderLoop error:", err);
+  }
+  animRAF = requestAnimationFrame(renderLoop);
+}
+
+// ── trigger move animation ──
+// orderedFlips: array of [x,y] sorted by distance from placed
+function animateMove(placeX, placeY, placeColor, orderedFlips, fromColor, toColor, onDone) {
+  const PLACE_DUR = 0.28;
+  const FLIP_DUR  = 0.32;  // duration per coin flip
+  const STAGGER   = 0.055; // seconds between each flip start
+
+  // place animation
+  discAnim[placeY][placeX] = { phase:'place', color:placeColor, t:0, dur:PLACE_DUR };
+  spawnPlaceParticles(placeX*CELL+CELL/2, placeY*CELL+CELL/2, placeColor);
+
+  // queue flip animations with stagger
+  orderedFlips.forEach(([fx, fy], i) => {
+    const dist = Math.max(Math.abs(fx-placeX), Math.abs(fy-placeY));
+    const delay = dist * 0.045 + i * STAGGER;
+    const startAt = performance.now() + delay * 1000;
+
+    // play sound in sync
+    scheduleSfxFlip(i, delay, fromColor);
+
+    // set a timeout to start this flip
+    setTimeout(() => {
+      discAnim[fy][fx] = { phase:'flip', fromColor, toColor, t:0, dur:FLIP_DUR };
+    }, delay * 1000);
+  });
+
+  // total time: place + last flip delay + flip duration
+  const lastDelay = orderedFlips.length > 0 ? (() => {
+    const [fx,fy] = orderedFlips[orderedFlips.length-1];
+    const dist = Math.max(Math.abs(fx-placeX), Math.abs(fy-placeY));
+    return dist*0.045 + (orderedFlips.length-1)*STAGGER;
+  })() : 0;
+  const totalMs = Math.max(PLACE_DUR, lastDelay + FLIP_DUR) * 1000 + 80;
+
+  setTimeout(() => {
+    // clear all lingering anim states so board is source of truth
+    for (let y = 0; y < SIZE; y++)
+      for (let x = 0; x < SIZE; x++)
+        discAnim[y][x] = null;
+    onDone();
+  }, totalMs);
+}
+
+// ── game logic ──
+function handleHumanMove(x, y) {
+  primeAudio(true);
+  if (!playing || busy || currentPlayer !== humanColor) return;
+  const flips = getFlips(board, x, y, humanColor);
+  if (flips.length === 0) return;
+  performMove({x, y, flips}, humanColor, "human");
+}
+
+function performMove(move, color, actor) {
+  busy = true;
+  moveNumber++;
+  const orderedFlips = move.flips.slice().sort((a, b) => {
+    const da = Math.max(Math.abs(a[0]-move.x), Math.abs(a[1]-move.y));
+    const db = Math.max(Math.abs(b[0]-move.x), Math.abs(b[1]-move.y));
+    return da - db;
+  });
+
+  // update board state immediately (for logic), but visuals come from discAnim
+  board = applyMove(board, move, color);
+  lastMove = {x:move.x, y:move.y};
+  legalMoves = [];
+  currentPlayer = -color;
+
+  setStatus(actor==="human"?"置いた":"CPUが置いた", `${move.flips.length}枚反転`);
+  updateScoreUI();
+  playPlaceSound(color);
+
+  animateMove(move.x, move.y, color, orderedFlips, -color, color, () => {
+    busy = false;
+    continueTurn();
+  });
+}
+
+function continueTurn() {
+  if (!playing) return;
+  if (isGameOver()) { finishGame(); return; }
+  const legal = getLegalMoves(board, currentPlayer);
+  if (legal.length === 0) {
+    const skipped = currentPlayer;
+    currentPlayer = -currentPlayer;
+    setStatus("PASS", `${colorName(skipped)}は置けません`);
+    playPassSound();
+    setTimeout(continueTurn, 660);
+    return;
+  }
+  if (currentPlayer === computerColor) {
+    busy = true;
+    setStatus("CPU思考中", "");
+    legalMoves = [];
+    thinkBar.style.display = "block";
+    updateTurnPill();
+    setTimeout(computerMove, level==="hard" ? 580 : 430);
+  } else {
+    busy = false;
+    legalMoves = legal;
+    setStatus("あなたの番", `${legal.length}手`);
+    thinkBar.style.display = "none";
+    updateTurnPill();
+  }
+}
+
+// ── CPU AI ──
+function computerMove() {
+  if (!playing || currentPlayer !== computerColor) return;
+  const moves = getLegalMoves(board, computerColor);
+  if (moves.length === 0) { busy=false; continueTurn(); return; }
+  const move = chooseMove(moves);
+  performMove(move, computerColor, "cpu");
+}
+function chooseMove(moves) {
+  if (level==="easy") return chooseEasy(moves);
+  if (level==="normal") return chooseNormal(moves);
+  return chooseHard(moves);
+}
+function chooseEasy(moves) {
+  const c=moves.filter(isCorner); if(c.length&&Math.random()<.4)return rand(c); return rand(moves);
+}
+function chooseNormal(moves) {
+  return bestBy(moves, m => { const n=applyMove(board,m,computerColor);
+    return evalBoard(n)+m.flips.length*8+(isCorner(m)?90:0)+Math.random()*2; });
+}
+function chooseHard(moves) {
+  const {black,white}=countPieces(); let depth=4;
+  if(black+white>=46)depth=5; if(moves.length<=4)depth++;
+  let best=-Infinity; const bests=[];
+  for(const m of orderedM(moves)){
+    const n=applyMove(board,m,computerColor);
+    const s=minimax(n,-computerColor,depth-1,-Infinity,Infinity);
+    if(s>best+.0001){best=s;bests.length=0;bests.push(m);}
+    else if(Math.abs(s-best)<.0001)bests.push(m);
+  }
+  return rand(bests);
+}
+function minimax(b,player,depth,alpha,beta){
+  if(depth<=0||isGameOver(b))return evalBoard(b);
+  const moves=getLegalMoves(b,player);
+  if(moves.length===0)return minimax(b,-player,depth-1,alpha,beta);
+  if(player===computerColor){
+    let v=-Infinity;
+    for(const m of orderedM(moves)){const n=applyMove(b,m,player);v=Math.max(v,minimax(n,-player,depth-1,alpha,beta));alpha=Math.max(alpha,v);if(alpha>=beta)break;}
+    return v;
+  }
+  let v=Infinity;
+  for(const m of orderedM(moves)){const n=applyMove(b,m,player);v=Math.min(v,minimax(n,-player,depth-1,alpha,beta));beta=Math.min(beta,v);if(alpha>=beta)break;}
+  return v;
+}
+function evalBoard(b){
+  const{black,white}=countPieces(b);const ai=computerColor===BLACK?black:white,hu=humanColor===BLACK?black:white;
+  if(isGameOver(b)){if(ai>hu)return 100000+(ai-hu)*1000;if(ai<hu)return -100000-(hu-ai)*1000;return 0;}
+  let pos=0;
+  for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){if(b[y][x]===computerColor)pos+=PW[y][x];else if(b[y][x]===humanColor)pos-=PW[y][x];}
+  const mob=getLegalMoves(b,computerColor).length-getLegalMoves(b,humanColor).length;
+  const corner=[[0,0],[7,0],[0,7],[7,7]].reduce((s,[x,y])=>s+(b[y][x]===computerColor?1:b[y][x]===humanColor?-1:0),0);
+  const{black:bc,white:wc}=countPieces(b);const diff=ai-hu,filled=bc+wc,dw=filled>48?9:filled>36?4:1;
+  return pos+mob*12+corner*45+diff*dw;
+}
+function isCorner(m){return(m.x===0||m.x===7)&&(m.y===0||m.y===7)}
+function orderedM(moves){return moves.slice().sort((a,b)=>mPri(b)-mPri(a))}
+function mPri(m){let s=PW[m.y][m.x]+m.flips.length*3;if(isCorner(m))s+=500;return s}
+function bestBy(moves,scorer){
+  let best=-Infinity;const ch=[];
+  for(const m of moves){const s=scorer(m);if(s>best+.0001){best=s;ch.length=0;ch.push(m);}else if(Math.abs(s-best)<.0001)ch.push(m);}
+  return rand(ch);
+}
+function rand(arr){return arr[Math.floor(Math.random()*arr.length)]}
+
+// ── finish ──
+function finishGame(){
+  playing=false;busy=false;legalMoves=[];updateTurnPill();
+  const{black,white}=countPieces();
+  const hu=humanColor===BLACK?black:white,cpu=computerColor===BLACK?black:white;
+  let kind="draw",title="DRAW";
+  if(hu>cpu){kind="win";title="YOU WIN!";}
+  else if(hu<cpu){kind="lose";title="YOU LOSE";}
+  setStatus(title,`黒 ${black} – 白 ${white}`);
+  showResult(kind,title,`黒 ${black} – 白 ${white}`);
+  flashOverlay.className="flash-overlay"; void flashOverlay.offsetWidth;
+  flashOverlay.className=`flash-overlay ${kind==="win"?"flash-win":kind==="lose"?"flash-lose":""}`;
+  if(kind==="win")playWinSound();else if(kind==="lose")playLoseSound();else playDrawSound();
+}
+
+function showResult(kind,title,text){
+  resultOverlay.className=`result-overlay show ${kind}`;
+  resultOverlay.setAttribute("aria-hidden","false");
+  resultTitle.textContent=title;resultText.textContent=text;
+  boardShell.classList.remove("shake-win","shake-lose");
+  void boardShell.offsetWidth;
+  boardShell.classList.add(kind==="win"?"shake-win":"shake-lose");
+  resultOverlay.querySelectorAll(".confetti,.rain").forEach(el=>el.remove());
+  const count=kind==="win"?90:55;
+  const colors=["#f7d98a","#e7b75a","#53c878","#fff4cf","#80d7ff","#ff9eb5","#a8f0c0"];
+  for(let i=0;i<count;i++){
+    const p=document.createElement("span");
+    p.className=kind==="lose"?"rain":"confetti";
+    p.style.setProperty("--x",`${Math.random()*100}%`);
+    p.style.setProperty("--d",`${1.6+Math.random()*2.0}s`);
+    p.style.setProperty("--c",colors[Math.floor(Math.random()*colors.length)]);
+    p.style.animationDelay=`${Math.random()*.7}s`;
+    resultOverlay.appendChild(p);
+  }
+}
+function hideResult(){
+  resultOverlay.className="result-overlay";
+  resultOverlay.setAttribute("aria-hidden","true");
+  resultOverlay.querySelectorAll(".confetti,.rain").forEach(el=>el.remove());
+  boardShell.classList.remove("shake-win","shake-lose");
+}
+
+function updateTurnPill(){
+  turnPill.classList.remove("active");
+  if(!playing){turnPill.textContent="READY";}
+  else if(isGameOver()){turnPill.textContent="END";}
+  else if(busy&&currentPlayer===computerColor){turnPill.innerHTML=`CPU<span class="thinking"></span>`;}
+  else{
+    turnPill.textContent=currentPlayer===humanColor?"YOUR TURN":"CPU";
+    if(currentPlayer===humanColor&&!busy)turnPill.classList.add("active");
+  }
+}
+function setStatus(main,sub=""){statusMain.textContent=main;statusSub.textContent=sub;}
+function updateScoreUI(){
+  const{black,white,empty}=countPieces();
+  if(black!==prevBlack){blackScoreEl.textContent=black;blackScoreEl.classList.remove("pop");void blackScoreEl.offsetWidth;blackScoreEl.classList.add("pop");prevBlack=black;}
+  if(white!==prevWhite){whiteScoreEl.textContent=white;whiteScoreEl.classList.remove("pop");void whiteScoreEl.offsetWidth;whiteScoreEl.classList.add("pop");prevWhite=white;}
+  const total=Math.max(1,black+white);
+  advBlack.style.width=`${Math.max(0,Math.min(100,black/total*100))}%`;
+  emptyCountEl.textContent=`EMPTY ${empty}`;
+  moveCountEl.textContent=`MOVE ${moveNumber}`;
+}
+
+function readSettings(){
+  humanColor=sideSelect.value==="black"?BLACK:WHITE;computerColor=-humanColor;level=levelSelect.value;
+  sSet("othello_v3",JSON.stringify({side:sideSelect.value,level,musicEnabled,sfxEnabled}));
+}
+function loadSettings(){
+  const raw=sGet("othello_v3");if(!raw)return;
+  try{
+    const s=JSON.parse(raw);
+    if(s.side==="black"||s.side==="white")sideSelect.value=s.side;
+    if(["easy","normal","hard"].includes(s.level))levelSelect.value=s.level;
+    if(typeof s.musicEnabled==="boolean")musicEnabled=s.musicEnabled;
+    if(typeof s.sfxEnabled==="boolean")sfxEnabled=s.sfxEnabled;
+  }catch(e){}
+  updateSoundBtns();
+}
+
+function startGame(){
+  primeAudio(true);readSettings();hideResult();
+  board=createBoard();initDiscAnim();particles=[];
+  currentPlayer=BLACK;lastMove=null;moveNumber=0;
+  playing=true;busy=false;legalMoves=[];prevBlack=2;prevWhite=2;
+  sideSelect.disabled=true;levelSelect.disabled=true;
+  setStatus("START","黒から");updateScoreUI();updateTurnPill();
+  setTimeout(continueTurn,100);
+}
+function resetGame(){
+  primeAudio(false);readSettings();hideResult();
+  board=createBoard();initDiscAnim();particles=[];
+  currentPlayer=BLACK;lastMove=null;moveNumber=0;
+  playing=false;busy=false;legalMoves=[];prevBlack=2;prevWhite=2;
+  sideSelect.disabled=false;levelSelect.disabled=false;
+  thinkBar.style.display="none";
+  setStatus("STARTで開始","置けるマスが光ります。");updateScoreUI();updateTurnPill();
+}
+
+// ── canvas click ──
+canvas.addEventListener("click", e => {
+  if (!playing || busy) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleW = CW / rect.width, scaleH = CH / rect.height;
+  const cx = (e.clientX - rect.left) * scaleW;
+  const cy = (e.clientY - rect.top)  * scaleH;
+  const x = Math.floor(cx / CELL), y = Math.floor(cy / CELL);
+  if (inBounds(x, y)) handleHumanMove(x, y);
+});
+canvas.addEventListener("touchend", e => {
+  e.preventDefault();
+  if (!playing || busy) return;
+  const touch = e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleW = CW / rect.width, scaleH = CH / rect.height;
+  const cx = (touch.clientX - rect.left) * scaleW;
+  const cy = (touch.clientY - rect.top)  * scaleH;
+  const x = Math.floor(cx / CELL), y = Math.floor(cy / CELL);
+  if (inBounds(x, y)) handleHumanMove(x, y);
+}, {passive:false});
+
+// ── AUDIO ──
+let audioCtx=null,masterGain=null,musicGain=null,sfxGain=null;
+let musicEnabled=true,sfxEnabled=true,musicStarted=false,musicTimer=null,musicStep=0;
+
+function getAC(){
+  if(!audioCtx){
+    const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;
+    try{
+      audioCtx=new C();masterGain=audioCtx.createGain();musicGain=audioCtx.createGain();sfxGain=audioCtx.createGain();
+      masterGain.gain.value=0.92;musicGain.gain.value=musicEnabled?.44:0;sfxGain.gain.value=sfxEnabled?.7:0;
+      musicGain.connect(masterGain);sfxGain.connect(masterGain);masterGain.connect(audioCtx.destination);
+    }catch(e){return null;}
+  }
+  if(audioCtx.state==="suspended")audioCtx.resume();
+  return audioCtx;
+}
+function primeAudio(tryMusic){const ac=getAC();if(!ac)return;if(tryMusic&&musicEnabled)startMusic();}
+function updateSoundBtns(){
+  musicBtn.textContent=musicEnabled?"♪ BGM ON":"♪ BGM OFF";musicBtn.classList.toggle("off",!musicEnabled);
+  sfxBtn.textContent=sfxEnabled?"🔊 SFX ON":"🔊 SFX OFF";sfxBtn.classList.toggle("off",!sfxEnabled);
+  if(musicGain&&audioCtx)musicGain.gain.setTargetAtTime(musicEnabled?.44:0,audioCtx.currentTime,.1);
+  if(sfxGain&&audioCtx)sfxGain.gain.setTargetAtTime(sfxEnabled?.7:0,audioCtx.currentTime,.05);
+}
+function handleMusicBtn(){
+  primeAudio(false);
+  if(!musicEnabled){musicEnabled=true;startMusic();}else if(!musicStarted){startMusic();}else{musicEnabled=false;stopMusic();}
+  sSet("othello_v3",JSON.stringify({side:sideSelect.value,level,musicEnabled,sfxEnabled}));updateSoundBtns();
+}
+function toggleSfx(){
+  primeAudio(false);sfxEnabled=!sfxEnabled;
+  sSet("othello_v3",JSON.stringify({side:sideSelect.value,level,musicEnabled,sfxEnabled}));updateSoundBtns();
+}
+
+// BGM
+const PENTA=[220,261.63,293.66,329.63,392,440,523.25,587.33,659.25,880];
+const MEL_A=[4,6,7,9,7,6,4,2,1,0,2,4,6,4,2,1];
+const MEL_B=[9,7,6,4,6,7,9,7,6,4,2,1,0,2,4,6];
+const BASS_P=[0,0,2,2,1,1,2,2,0,0,1,1,2,1,0,1];
+function startMusic(){const ac=getAC();if(!ac||musicStarted||!musicEnabled)return;musicStarted=true;updateSoundBtns();musicStep=0;scheduleMusic();}
+function stopMusic(){clearTimeout(musicTimer);musicTimer=null;musicStarted=false;updateSoundBtns();}
+function scheduleMusic(){
+  const ac=getAC();if(!ac||!musicEnabled){musicStarted=false;updateSoundBtns();return;}
+  const now=ac.currentTime,step=musicStep,phrase=Math.floor(step/16)%2,pos=step%16;
+  const mel=phrase===0?MEL_A:MEL_B,mFreq=PENTA[mel[pos]],bFreq=PENTA[BASS_P[pos]]/2;
+  if(pos%4===0)playTone(bFreq,.88,.08,"sine",musicGain,now,.02,.7);
+  if(pos%2===0)playTone(mFreq*.75,.42,.045,"triangle",musicGain,now,.01,.38);
+  playTone(mFreq,.28,pos%2===0?.07:.05,"triangle",musicGain,now,.008,.24);
+  if(pos%8===0)playTone(mFreq*2,.18,.025,"sine",musicGain,now+.06,.005,.16);
+  if(pos%4===2)playTone(mFreq*1.498,.5,.03,"sine",musicGain,now,.015,.45);
+  musicStep++;musicTimer=setTimeout(scheduleMusic,240);
+}
+function playTone(freq,dur,vol,type,dest,startTime,attack,release){
+  const ac=getAC();if(!ac||!dest)return;
+  const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+  f.type="lowpass";f.frequency.setValueAtTime(2400,startTime);
+  o.type=type;o.frequency.setValueAtTime(Math.max(20,freq),startTime);
+  g.gain.setValueAtTime(.0001,startTime);
+  g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),startTime+attack);
+  g.gain.exponentialRampToValueAtTime(.0001,startTime+Math.max(attack+.01,dur-release));
+  o.connect(f);f.connect(g);g.connect(dest);o.start(startTime);o.stop(startTime+dur+.05);
+}
+
+function sfxTone(freq,dur,vol,type,offset=0,sweepTo=null){
+  const ac=getAC();if(!ac||!sfxEnabled||!sfxGain)return;
+  const t=ac.currentTime+offset;
+  const o=ac.createOscillator(),g=ac.createGain(),f=ac.createBiquadFilter();
+  f.type="lowpass";f.frequency.value=3200;
+  o.type=type;o.frequency.setValueAtTime(freq,t);
+  if(sweepTo)o.frequency.exponentialRampToValueAtTime(Math.max(24,sweepTo),t+dur);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.008);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(f);f.connect(g);g.connect(sfxGain);o.start(t);o.stop(t+dur+.03);
+}
+function playPlaceSound(color){
+  sfxTone(color===BLACK?130:170,.10,.28,"sine",0,color===BLACK?80:110);
+  sfxTone(900,.03,.07,"square",0,300);
+  sfxTone(color===BLACK?880:1046,.09,.04,"triangle",.012);
+}
+// each flip coin sound timed with animation delay
+function scheduleSfxFlip(index, delayS, fromColor) {
+  sfxTone(310+index*28, .055, .09, "square", delayS, 500+index*25);
+  sfxTone(620+index*18, .035, .04, "triangle", delayS+.008);
+}
+function playPassSound(){sfxTone(220,.18,.08,"sine",0,160);}
+function playWinSound(){
+  const notes=[392,494,587,740,880,1047];
+  notes.forEach((f,i)=>{sfxTone(f,.22,.14,"triangle",i*.09,f*1.05);});
+  sfxTone(98,.45,.18,"sine",.05,60);
+}
+function playLoseSound(){[392,330,247,196,147].forEach((f,i)=>sfxTone(f,.24,.1,"sine",i*.13,f*.78));sfxTone(110,.55,.12,"sine",.1,80);}
+function playDrawSound(){[330,392,370,330].forEach((f,i)=>sfxTone(f,.2,.09,"triangle",i*.13));}
+
+// ── responsive scaling ──
+function scaleApp(){
+  const root=document.getElementById("app-root");if(!root)return;
+  root.style.transform="scale(1)";
+  const scale=Math.min(1,window.innerWidth/(root.offsetWidth+16),window.innerHeight/(root.offsetHeight+16));
+  root.style.transform=`scale(${scale})`;
+}
+
+// ── events ──
+startBtn.addEventListener("click",startGame);
+resetBtn.addEventListener("click",resetGame);
+nextBtn.addEventListener("click",startGame);
+musicBtn.addEventListener("click",handleMusicBtn);
+sfxBtn.addEventListener("click",toggleSfx);
+sideSelect.addEventListener("change",readSettings);
+levelSelect.addEventListener("change",readSettings);
+window.addEventListener("pointerdown",e=>{
+  if(!e.target.closest("button,select,input,label"))document.body.focus();
+  if(!e.target.closest("#musicBtn"))primeAudio(true);
+},{passive:true});
+window.addEventListener("keydown",e=>{
+  primeAudio(true);
+  if(e.key==="Enter"&&!playing)startGame();
+  if(e.key.toLowerCase()==="r")resetGame();
+});
+window.addEventListener("resize",scaleApp);
+document.body.focus();
+loadSettings();
+resetGame();
+requestAnimationFrame(ts=>{ lastRenderTime=ts; renderLoop(ts); });
+requestAnimationFrame(scaleApp);
+</script>
+</body>
+</html>

@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5五将棋 CPU対戦</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg0: #10131a;
+    --bg1: #171c27;
+    --panel: rgba(255,255,255,0.08);
+    --panel2: rgba(255,255,255,0.12);
+    --line: rgba(255,255,255,0.20);
+    --text: #f6efe2;
+    --muted: rgba(246,239,226,0.72);
+    --accent: #f0b85f;
+    --accent2: #7bdff2;
+    --danger: #f4777f;
+    --cellA: #d9a85f;
+    --cellB: #c89049;
+    --cellLine: rgba(72,44,17,0.55);
+    --human: #f8e6b8;
+    --cpu: #f5cc91;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    background:
+      radial-gradient(circle at 18% 18%, rgba(123,223,242,0.16), transparent 28%),
+      radial-gradient(circle at 82% 12%, rgba(240,184,95,0.13), transparent 26%),
+      linear-gradient(135deg, #0b0d12 0%, #151a25 60%, #0d1118 100%);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  #app-root {
+    transform-origin: center center;
+    flex-shrink: 0;
+    width: 1080px;
+    min-height: 720px;
+    padding: 18px;
+  }
+  .shell {
+    display: grid;
+    grid-template-columns: 250px 540px 254px;
+    gap: 18px;
+    align-items: stretch;
+  }
+  .panel {
+    background: linear-gradient(180deg, var(--panel2), var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 22px 60px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(8px);
+  }
+  .left, .right { padding: 16px; min-height: 684px; }
+  .center { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .titleBox {
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(240,184,95,0.20), rgba(123,223,242,0.08));
+    border: 1px solid rgba(255,255,255,0.14);
+    margin-bottom: 14px;
+  }
+  h1 { font-size: 30px; letter-spacing: 0.08em; line-height: 1.1; white-space: nowrap; }
+  .subTitle { color: var(--muted); font-size: 12px; margin-top: 6px; letter-spacing: 0.06em; }
+  .sectionTitle {
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    margin: 14px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sectionTitle::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 14px rgba(240,184,95,0.75);
+  }
+  .controls { display: grid; gap: 10px; }
+  select, button {
+    font-family: inherit;
+    border: 0;
+    outline: none;
+  }
+  .selectWrap select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(0,0,0,0.32);
+    color: var(--text);
+    border: 1px solid rgba(255,255,255,0.14);
+    font-weight: 700;
+  }
+  .btn {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffe2aa, #d99842);
+    color: #241404;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+  .btn:active { transform: translateY(1px) scale(0.99); }
+  .btn.secondary {
+    background: rgba(255,255,255,0.10);
+    color: var(--text);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: none;
+  }
+  .scoreGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .scoreCard {
+    border-radius: 16px;
+    padding: 12px;
+    text-align: center;
+    background: rgba(0,0,0,0.22);
+    border: 1px solid rgba(255,255,255,0.11);
+  }
+  .scoreCard .num { font-size: 28px; font-weight: 900; color: var(--accent2); line-height: 1; }
+  .scoreCard .lbl { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .ruleText {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .turnBar {
+    height: 62px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: linear-gradient(90deg, rgba(0,0,0,0.28), rgba(255,255,255,0.08));
+    display: grid;
+    grid-template-columns: 122px 1fr;
+    overflow: hidden;
+  }
+  .turnBadge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: #161008;
+    background: linear-gradient(180deg, #f7d18b, #d5953e);
+  }
+  .message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    text-align: center;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .boardWrap {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    border-radius: 22px;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.10), rgba(0,0,0,0.16)),
+      radial-gradient(circle at 50% 10%, rgba(240,184,95,0.18), transparent 58%);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .board {
+    position: relative;
+    width: 500px;
+    height: 500px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    border: 5px solid rgba(75,44,16,0.85);
+    box-shadow: 0 18px 36px rgba(0,0,0,0.30), inset 0 0 0 1px rgba(255,255,255,0.28);
+    background: var(--cellA);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .cell {
+    position: relative;
+    background: linear-gradient(135deg, var(--cellA), var(--cellB));
+    border-right: 2px solid var(--cellLine);
+    border-bottom: 2px solid var(--cellLine);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .cell:nth-child(5n) { border-right: 0; }
+  .cell:nth-child(n+21) { border-bottom: 0; }
+  .cell::after { content: none; }
+  .cell.zoneHuman { box-shadow: inset 0 0 0 999px rgba(123,223,242,0.06); }
+  .cell.zoneCpu { box-shadow: inset 0 0 0 999px rgba(240,184,95,0.06); }
+  .cell.selected { outline: 4px solid rgba(123,223,242,0.95); outline-offset: -7px; z-index: 2; }
+  .cell.legal::before {
+    content: "";
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(36,118,82,0.46);
+    box-shadow: 0 0 0 7px rgba(255,255,255,0.10), 0 0 18px rgba(36,118,82,0.35);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .cell.capture::before {
+    width: 70px;
+    height: 70px;
+    background: rgba(244,119,127,0.23);
+    border: 3px solid rgba(244,119,127,0.75);
+    box-shadow: 0 0 22px rgba(244,119,127,0.32);
+  }
+  .piece {
+    position: relative;
+    width: 76px;
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    color: #221407;
+    font-weight: 900;
+    font-size: 38px;
+    line-height: 1;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+    clip-path: polygon(50% 0%, 92% 22%, 86% 100%, 14% 100%, 8% 22%);
+    background:
+      linear-gradient(160deg, rgba(255,255,255,0.55) 0%, transparent 38%),
+      linear-gradient(180deg, #fff2c9 0%, #e3b166 75%, #bd7e31 100%);
+    box-shadow: 0 9px 12px rgba(50,24,5,0.34);
+    border: 1px solid rgba(80,40,9,0.35);
+  }
+  .piece.cpu {
+    transform: rotate(180deg);
+    background:
+      linear-gradient(160deg, rgba(255,255,255,0.48) 0%, transparent 38%),
+      linear-gradient(180deg, #ffe2b5 0%, #d5974f 76%, #a76528 100%);
+  }
+  .piece.promoted { color: #7d130d; }
+  .piece.king { font-size: 35px; }
+  .lastMoveMark {
+    position: absolute;
+    inset: 7px;
+    border-radius: 8px;
+    border: 3px solid rgba(255,255,255,0.34);
+    box-shadow: inset 0 0 0 999px rgba(255,255,255,0.10);
+    pointer-events: none;
+  }
+  .hands {
+    display: grid;
+    gap: 10px;
+  }
+  .handBox {
+    border-radius: 18px;
+    padding: 12px;
+    background: rgba(0,0,0,0.24);
+    border: 1px solid rgba(255,255,255,0.11);
+  }
+  .handHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 900;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .miniNote { color: var(--muted); font-size: 11px; font-weight: 700; }
+  .handPieces {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+    min-height: 86px;
+  }
+  .handBtn {
+    min-height: 44px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.10);
+    color: var(--text);
+    border: 1px solid rgba(255,255,255,0.13);
+    cursor: pointer;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  }
+  .handBtn:hover { transform: translateY(-1px); background: rgba(255,255,255,0.16); }
+  .handBtn.selected { outline: 3px solid rgba(123,223,242,0.85); background: rgba(123,223,242,0.18); }
+  .handBtn.disabled { opacity: 0.38; cursor: default; transform: none; }
+  .handBtn.hasPiece {
+    opacity: 1;
+    border-color: rgba(255,255,255,0.34);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 8px 18px rgba(0,0,0,0.18);
+  }
+  .handBtn.humanHandBtn.hasPiece {
+    background: linear-gradient(180deg, rgba(123,223,242,0.38), rgba(43,121,144,0.34));
+    color: #f7feff;
+  }
+  .handBtn.cpuHandBtn.hasPiece {
+    background: linear-gradient(180deg, rgba(240,184,95,0.42), rgba(151,82,32,0.36));
+    color: #fff5df;
+  }
+  .handBtn.disabled.hasPiece { cursor: default; }
+  .handPieceName { font-size: 20px; line-height: 1; }
+  .handCount {
+    min-width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(255,255,255,0.20);
+    font-size: 12px;
+    line-height: 1;
+  }
+  .logBox {
+    height: 256px;
+    overflow: hidden;
+    border-radius: 18px;
+    background: rgba(0,0,0,0.24);
+    border: 1px solid rgba(255,255,255,0.11);
+    padding: 10px;
+  }
+  .logList {
+    height: 100%;
+    overflow: auto;
+    padding-right: 6px;
+  }
+  .logItem {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 8px;
+    padding: 7px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    color: rgba(246,239,226,0.88);
+    font-size: 13px;
+  }
+  .logItem:last-child { border-bottom: 0; }
+  .logNo { color: var(--muted); font-weight: 800; }
+  .thinking {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: pulse 0.85s infinite alternate;
+  }
+  .dot:nth-child(2) { animation-delay: 0.15s; }
+  .dot:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes pulse { from { opacity: 0.25; transform: translateY(2px); } to { opacity: 1; transform: translateY(-2px); } }
+  .modalShade {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.58);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+  .modalShade.show { display: flex; }
+  .modal {
+    width: 340px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, #252c3a, #131821);
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 22px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+  .modal h2 { font-size: 22px; margin-bottom: 8px; }
+  .modal p { color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
+  .modalBtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .resultOverlay, .startOverlay {
+    position: absolute;
+    inset: 16px;
+    border-radius: 20px;
+    background: rgba(12,14,19,0.80);
+    border: 1px solid rgba(255,255,255,0.16);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 12;
+    backdrop-filter: blur(5px);
+  }
+  .resultOverlay.show, .startOverlay.show { display: flex; }
+  .startCard .tiny { margin-top: 12px; }
+  .resultCard h2 { font-size: 44px; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .resultCard p { color: var(--muted); margin-bottom: 18px; font-weight: 700; }
+  .checkFlash {
+    animation: checkFlash 0.7s ease;
+  }
+  @keyframes checkFlash {
+    0% { filter: brightness(1.0); }
+    30% { filter: brightness(1.45) saturate(1.25); }
+    100% { filter: brightness(1.0); }
+  }
+  .kbd {
+    display: inline-flex;
+    justify-content: center;
+    min-width: 24px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.12);
+    color: var(--text);
+    font-weight: 900;
+    font-size: 12px;
+  }
+  .tiny { font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 10px; }
+</style>
+</head>
+<body tabindex="0">
+<div id="app-root">
+  <div class="shell">
+    <aside class="panel left">
+      <div class="titleBox">
+        <div>
+          <h1>5五将棋</h1>
+          <div class="subTitle">CPU MATCH</div>
+        </div>
+      </div>
+
+      <div class="sectionTitle">設定</div>
+      <div class="controls">
+        <div class="selectWrap">
+          <select id="difficulty" aria-label="難易度">
+            <option value="easy">簡単：少しだけ読む</option>
+            <option value="normal" selected>普通：2〜3手先読み</option>
+            <option value="hard">難しい：深く読む</option>
+          </select>
+        </div>
+        <div class="selectWrap">
+          <select id="playerSide" aria-label="先手・後手">
+            <option value="sente" selected>あなた：先手（下側）</option>
+            <option value="gote">あなた：後手（下側）</option>
+          </select>
+        </div>
+        <button class="btn" id="newGameBtn">GAME START</button>
+        <button class="btn secondary" id="soundBtn">音 ON</button>
+      </div>
+
+      <div class="sectionTitle">成績</div>
+      <div class="scoreGrid">
+        <div class="scoreCard"><div class="num" id="winCount">0</div><div class="lbl">WIN</div></div>
+        <div class="scoreCard"><div class="num" id="loseCount">0</div><div class="lbl">LOSE</div></div>
+      </div>
+
+      <div class="sectionTitle">遊び方</div>
+      <div class="ruleText">
+        <span id="sideHelp">あなたは先手（下側）です。</span><br>
+        盤上の駒、または持ち駒を選び、移動先をクリックします。<br>
+        成れるのは相手側の最奥1段。歩の二歩、行き所のない歩、打ち歩詰めは不可です。
+      </div>
+      <div class="tiny">
+        <span class="kbd">R</span> 新規対局　<span class="kbd">Esc</span> 選択解除
+      </div>
+    </aside>
+
+    <main class="panel center">
+      <div class="turnBar">
+        <div class="turnBadge" id="turnBadge">あなた</div>
+        <div class="message" id="message">駒を選んでください</div>
+      </div>
+      <div class="boardWrap" id="boardWrap">
+        <div id="board" class="board" aria-label="5五将棋盤"></div>
+        <div id="resultOverlay" class="resultOverlay">
+          <div class="resultCard">
+            <h2 id="resultTitle">勝利</h2>
+            <p id="resultText">対局終了</p>
+            <button class="btn" id="overlayRestart">RESTART</button>
+          </div>
+        </div>
+        <div id="startOverlay" class="startOverlay show">
+          <div class="resultCard startCard">
+            <h2>GAME START</h2>
+            <p>設定を選んで開始してください</p>
+            <button class="btn" id="startGameBtn">GAME START</button>
+            <div class="tiny"><span class="kbd">Enter</span> / <span class="kbd">Space</span> でも開始</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="panel right">
+      <div class="sectionTitle">持ち駒</div>
+      <div class="hands">
+        <div class="handBox">
+          <div class="handHeader"><span>CPU</span><span class="miniNote" id="cpuSideNote">後手・上側</span></div>
+          <div id="cpuHand" class="handPieces"></div>
+        </div>
+        <div class="handBox">
+          <div class="handHeader"><span>あなた</span><span class="miniNote" id="humanSideNote">先手・下側</span></div>
+          <div id="humanHand" class="handPieces"></div>
+        </div>
+      </div>
+
+      <div class="sectionTitle">棋譜</div>
+      <div class="logBox"><div id="logList" class="logList"></div></div>
+    </aside>
+  </div>
+</div>
+
+<div id="promoteModal" class="modalShade">
+  <div class="modal">
+    <h2>成りますか？</h2>
+    <p id="promoteText">この駒は成ることができます。</p>
+    <div class="modalBtns">
+      <button class="btn" id="promoteYes">成る</button>
+      <button class="btn secondary" id="promoteNo">成らず</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('error', function(e) {
+  console.error('Error:', e.message, e.filename, e.lineno);
+});
+
+const SIZE = 5;
+const HUMAN = 'H';
+const CPU = 'C';
+const TYPES = ['K', 'R', 'B', 'G', 'S', 'P'];
+const HAND_TYPES = ['R', 'B', 'G', 'S', 'P'];
+const PIECE_JA = { K: '玉', R: '飛', B: '角', G: '金', S: '銀', P: '歩' };
+const PROMO_JA = { R: '竜', B: '馬', S: '全', P: 'と' };
+const VALUES = { K: 200000, R: 950, B: 850, G: 610, S: 520, P: 120 };
+const PROMO_BONUS = { R: 260, B: 240, S: 150, P: 260 };
+const RANKS = ['一', '二', '三', '四', '五'];
+const ZEN = ['０', '１', '２', '３', '４', '５'];
+
+let state = null;
+let selected = null;
+let currentLegal = [];
+let pendingPromotion = null;
+let lastMoveTo = null;
+let soundOn = true;
+let audioCtx = null;
+let audioUnlocked = false;
+let humanSide = 'sente';
+let gameStarted = false;
+let cpuTimer = null;
+let stats = { win: 0, lose: 0 };
+let memoryStorage = {};
+
+function storageGet(key) {
+  try { return localStorage.getItem(key); } catch(e) { return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null; }
+}
+function storageSet(key, val) {
+  try { localStorage.setItem(key, val); } catch(e) { memoryStorage[key] = val; }
+}
+function getAC() {
+  if (!soundOn) return null;
+  if (!audioCtx) {
+    if (!audioUnlocked) return null;
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { return null; }
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function unlockAudio() {
+  audioUnlocked = true;
+  return getAC();
+}
+function tone(freq, duration, type, gainValue) {
+  const ac = getAC(); if (!ac) return;
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, ac.currentTime);
+  gain.gain.setValueAtTime(0.0001, ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(gainValue || 0.08, ac.currentTime + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + duration);
+  osc.connect(gain).connect(ac.destination);
+  osc.start();
+  osc.stop(ac.currentTime + duration + 0.02);
+}
+function soundMove() { tone(520, 0.07, 'triangle', 0.045); }
+function soundCapture() { tone(220, 0.08, 'square', 0.045); setTimeout(function(){ tone(410, 0.09, 'triangle', 0.04); }, 45); }
+function soundCheck() { tone(760, 0.09, 'sawtooth', 0.035); setTimeout(function(){ tone(920, 0.08, 'triangle', 0.032); }, 70); }
+function soundWin() { tone(520, 0.10, 'triangle', 0.05); setTimeout(function(){ tone(660, 0.12, 'triangle', 0.05); }, 105); setTimeout(function(){ tone(880, 0.18, 'triangle', 0.05); }, 235); }
+function soundLose() { tone(380, 0.14, 'sine', 0.05); setTimeout(function(){ tone(260, 0.22, 'sine', 0.05); }, 135); }
+
+function loadStats() {
+  try {
+    const raw = storageGet('gogoShogiStats');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      stats.win = Number(parsed.win) || 0;
+      stats.lose = Number(parsed.lose) || 0;
+    }
+  } catch(e) {}
+
+  // 起動時のデフォルト。前回の設定保存に左右されないよう、毎回この状態から始める。
+  soundOn = true;
+  humanSide = 'sente';
+  const diff = document.getElementById('difficulty');
+  if (diff) diff.value = 'normal';
+  const sideSel = document.getElementById('playerSide');
+  if (sideSel) sideSel.value = 'sente';
+
+  updateStatsUI();
+  updateSoundButton();
+  updateSideUI();
+}
+function saveStats() { storageSet('gogoShogiStats', JSON.stringify(stats)); }
+function updateStatsUI() {
+  document.getElementById('winCount').textContent = String(stats.win);
+  document.getElementById('loseCount').textContent = String(stats.lose);
+}
+function updateSoundButton() {
+  document.getElementById('soundBtn').textContent = soundOn ? '音 ON' : '音 OFF';
+}
+
+function clonePiece(p) { return p ? { owner: p.owner, type: p.type, promoted: !!p.promoted } : null; }
+function cloneState(s) {
+  return {
+    board: s.board.map(function(row){ return row.map(clonePiece); }),
+    hands: {
+      H: Object.assign({}, s.hands.H),
+      C: Object.assign({}, s.hands.C)
+    },
+    turn: s.turn,
+    moveNo: s.moveNo,
+    log: s.log.slice(),
+    gameOver: s.gameOver
+  };
+}
+function emptyHands() {
+  return { K: 0, R: 0, B: 0, G: 0, S: 0, P: 0 };
+}
+function sideOfOwner(owner) {
+  if (owner === HUMAN) return humanSide;
+  return humanSide === 'sente' ? 'gote' : 'sente';
+}
+function ownerForSide(side) {
+  return sideOfOwner(HUMAN) === side ? HUMAN : CPU;
+}
+function sideName(owner) { return sideOfOwner(owner) === 'sente' ? '先手' : '後手'; }
+function sidePlace(owner) { return owner === HUMAN ? '下側' : '上側'; }
+function updateSideUI() {
+  const sel = document.getElementById('playerSide');
+  if (sel) sel.value = humanSide;
+  const humanNote = document.getElementById('humanSideNote');
+  const cpuNote = document.getElementById('cpuSideNote');
+  const help = document.getElementById('sideHelp');
+  if (humanNote) humanNote.textContent = sideName(HUMAN) + '・' + sidePlace(HUMAN);
+  if (cpuNote) cpuNote.textContent = sideName(CPU) + '・' + sidePlace(CPU);
+  if (help) help.textContent = 'あなたは' + sideName(HUMAN) + '（' + sidePlace(HUMAN) + '）です。';
+}
+function placeSentePieces(b, owner) {
+  b[3][0] = { owner: owner, type: 'P', promoted: false };
+  b[4][0] = { owner: owner, type: 'K', promoted: false };
+  b[4][1] = { owner: owner, type: 'G', promoted: false };
+  b[4][2] = { owner: owner, type: 'S', promoted: false };
+  b[4][3] = { owner: owner, type: 'B', promoted: false };
+  b[4][4] = { owner: owner, type: 'R', promoted: false };
+}
+function placeGotePieces(b, owner) {
+  b[0][0] = { owner: owner, type: 'R', promoted: false };
+  b[0][1] = { owner: owner, type: 'B', promoted: false };
+  b[0][2] = { owner: owner, type: 'S', promoted: false };
+  b[0][3] = { owner: owner, type: 'G', promoted: false };
+  b[0][4] = { owner: owner, type: 'K', promoted: false };
+  b[1][4] = { owner: owner, type: 'P', promoted: false };
+}
+function initialState() {
+  const b = Array.from({ length: SIZE }, function(){ return Array(SIZE).fill(null); });
+  placeSentePieces(b, ownerForSide('sente'));
+  placeGotePieces(b, ownerForSide('gote'));
+  return { board: b, hands: { H: emptyHands(), C: emptyHands() }, turn: ownerForSide('sente'), moveNo: 1, log: [], gameOver: false };
+}
+function opponent(owner) { return owner === HUMAN ? CPU : HUMAN; }
+function dir(owner) { return sideOfOwner(owner) === 'sente' ? -1 : 1; }
+function inBounds(r, c) { return r >= 0 && r < SIZE && c >= 0 && c < SIZE; }
+function promotionRow(owner) { return sideOfOwner(owner) === 'sente' ? 0 : SIZE - 1; }
+function advancement(owner, r) { return dir(owner) === 1 ? r : (SIZE - 1 - r); }
+function canPromoteType(type) { return type === 'R' || type === 'B' || type === 'S' || type === 'P'; }
+function inPromotionZone(owner, r) { return r === promotionRow(owner); }
+function mustPromote(type, owner, toR) { return type === 'P' && toR === promotionRow(owner); }
+function coord(r, c) { return ZEN[SIZE - c] + RANKS[r]; }
+
+function stepDirsFor(piece) {
+  const d = dir(piece.owner);
+  const gold = [[d,0],[d,-1],[d,1],[0,-1],[0,1],[-d,0]];
+  if (piece.type === 'K') return [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+  if (piece.type === 'G') return gold;
+  if (piece.promoted && (piece.type === 'S' || piece.type === 'P')) return gold;
+  if (piece.type === 'S') return [[d,0],[d,-1],[d,1],[-d,-1],[-d,1]];
+  if (piece.type === 'P') return [[d,0]];
+  if (piece.promoted && piece.type === 'R') return [[-1,-1],[-1,1],[1,-1],[1,1]];
+  if (piece.promoted && piece.type === 'B') return [[-1,0],[1,0],[0,-1],[0,1]];
+  return [];
+}
+function slideDirsFor(piece) {
+  if (piece.type === 'R') return [[-1,0],[1,0],[0,-1],[0,1]];
+  if (piece.type === 'B') return [[-1,-1],[-1,1],[1,-1],[1,1]];
+  return [];
+}
+
+function pseudoPieceMoves(s, r, c, attacksOnly) {
+  const piece = s.board[r][c];
+  if (!piece) return [];
+  const moves = [];
+  const steps = stepDirsFor(piece);
+  for (let i = 0; i < steps.length; i++) {
+    const nr = r + steps[i][0];
+    const nc = c + steps[i][1];
+    if (!inBounds(nr, nc)) continue;
+    const target = s.board[nr][nc];
+    if (attacksOnly || !target || target.owner !== piece.owner) {
+      moves.push({ from: { r: r, c: c }, to: { r: nr, c: nc }, owner: piece.owner, type: piece.type, promote: false, drop: false });
+    }
+  }
+  const slides = slideDirsFor(piece);
+  for (let j = 0; j < slides.length; j++) {
+    let nr2 = r + slides[j][0];
+    let nc2 = c + slides[j][1];
+    while (inBounds(nr2, nc2)) {
+      const target2 = s.board[nr2][nc2];
+      if (attacksOnly) {
+        moves.push({ from: { r: r, c: c }, to: { r: nr2, c: nc2 }, owner: piece.owner, type: piece.type, promote: false, drop: false });
+        if (target2) break;
+      } else {
+        if (!target2) {
+          moves.push({ from: { r: r, c: c }, to: { r: nr2, c: nc2 }, owner: piece.owner, type: piece.type, promote: false, drop: false });
+        } else {
+          if (target2.owner !== piece.owner) {
+            moves.push({ from: { r: r, c: c }, to: { r: nr2, c: nc2 }, owner: piece.owner, type: piece.type, promote: false, drop: false });
+          }
+          break;
+        }
+      }
+      nr2 += slides[j][0];
+      nc2 += slides[j][1];
+    }
+  }
+  return moves;
+}
+
+function expandPromotionOptions(s, move) {
+  if (move.drop) return [move];
+  const piece = s.board[move.from.r][move.from.c];
+  if (!piece || piece.promoted || !canPromoteType(piece.type)) return [move];
+  const can = inPromotionZone(piece.owner, move.from.r) || inPromotionZone(piece.owner, move.to.r);
+  if (!can) return [move];
+  if (mustPromote(piece.type, piece.owner, move.to.r)) {
+    return [Object.assign({}, move, { promote: true })];
+  }
+  return [Object.assign({}, move, { promote: false }), Object.assign({}, move, { promote: true })];
+}
+function hasUnpromotedPawnOnFile(s, owner, c) {
+  for (let r = 0; r < SIZE; r++) {
+    const p = s.board[r][c];
+    if (p && p.owner === owner && p.type === 'P' && !p.promoted) return true;
+  }
+  return false;
+}
+function pseudoLegalMoves(s, owner) {
+  const base = [];
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const p = s.board[r][c];
+      if (!p || p.owner !== owner) continue;
+      const raw = pseudoPieceMoves(s, r, c, false);
+      for (let i = 0; i < raw.length; i++) {
+        const options = expandPromotionOptions(s, raw[i]);
+        for (let k = 0; k < options.length; k++) base.push(options[k]);
+      }
+    }
+  }
+  for (let t = 0; t < HAND_TYPES.length; t++) {
+    const type = HAND_TYPES[t];
+    if ((s.hands[owner][type] || 0) <= 0) continue;
+    for (let rr = 0; rr < SIZE; rr++) {
+      for (let cc = 0; cc < SIZE; cc++) {
+        if (s.board[rr][cc]) continue;
+        if (type === 'P') {
+          if (rr === promotionRow(owner)) continue;
+          if (hasUnpromotedPawnOnFile(s, owner, cc)) continue;
+        }
+        base.push({ from: null, to: { r: rr, c: cc }, owner: owner, type: type, promote: false, drop: true });
+      }
+    }
+  }
+  return base;
+}
+function findKing(s, owner) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const p = s.board[r][c];
+      if (p && p.owner === owner && p.type === 'K') return { r: r, c: c };
+    }
+  }
+  return null;
+}
+function attacksSquare(s, owner, tr, tc) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const p = s.board[r][c];
+      if (!p || p.owner !== owner) continue;
+      const moves = pseudoPieceMoves(s, r, c, true);
+      for (let i = 0; i < moves.length; i++) {
+        if (moves[i].to.r === tr && moves[i].to.c === tc) return true;
+      }
+    }
+  }
+  return false;
+}
+function inCheck(s, owner) {
+  const k = findKing(s, owner);
+  if (!k) return true;
+  return attacksSquare(s, opponent(owner), k.r, k.c);
+}
+function applyMove(s, move) {
+  const ns = cloneState(s);
+  const owner = move.owner;
+  if (move.drop) {
+    ns.hands[owner][move.type] -= 1;
+    ns.board[move.to.r][move.to.c] = { owner: owner, type: move.type, promoted: false };
+  } else {
+    const p = clonePiece(ns.board[move.from.r][move.from.c]);
+    const cap = ns.board[move.to.r][move.to.c];
+    if (cap) {
+      ns.hands[owner][cap.type] = (ns.hands[owner][cap.type] || 0) + 1;
+    }
+    ns.board[move.from.r][move.from.c] = null;
+    p.promoted = !!p.promoted || !!move.promote;
+    ns.board[move.to.r][move.to.c] = p;
+  }
+  ns.turn = opponent(owner);
+  return ns;
+}
+function isPawnDropMate(s, move) {
+  if (!move.drop || move.type !== 'P') return false;
+  const ns = applyMove(s, move);
+  const opp = opponent(move.owner);
+  if (!inCheck(ns, opp)) return false;
+  const replies = legalMoves(ns, opp, true);
+  return replies.length === 0;
+}
+function legalMoves(s, owner, ignorePawnMate) {
+  const raw = pseudoLegalMoves(s, owner);
+  const good = [];
+  for (let i = 0; i < raw.length; i++) {
+    const mv = raw[i];
+    const ns = applyMove(s, mv);
+    if (inCheck(ns, owner)) continue;
+    if (!ignorePawnMate && isPawnDropMate(s, mv)) continue;
+    good.push(mv);
+  }
+  return good;
+}
+
+function sameSelectionMove(mv, sel) {
+  if (!sel) return false;
+  if (sel.kind === 'board') return !mv.drop && mv.from.r === sel.r && mv.from.c === sel.c;
+  return mv.drop && mv.type === sel.type;
+}
+function moveSignature(m) {
+  return [m.drop ? 'D' : 'M', m.type, m.from ? m.from.r : '-', m.from ? m.from.c : '-', m.to.r, m.to.c, m.promote ? '+' : '='].join('');
+}
+function pieceLabel(p) {
+  if (!p) return '';
+  if (p.promoted && PROMO_JA[p.type]) return PROMO_JA[p.type];
+  return PIECE_JA[p.type];
+}
+function moveNotation(move, beforeState) {
+  const mark = move.owner === HUMAN ? '▲' : '△';
+  const to = coord(move.to.r, move.to.c);
+  let type = move.type;
+  if (!move.drop && beforeState) {
+    const p = beforeState.board[move.from.r][move.from.c];
+    if (p) type = p.type;
+  }
+  const label = move.promote ? (PROMO_JA[type] || PIECE_JA[type]) : PIECE_JA[type];
+  const suffix = move.drop ? '打' : (move.promote ? '成' : '');
+  return mark + to + label + suffix;
+}
+
+function render() {
+  renderBoard();
+  renderHands();
+  renderLog();
+  const badge = document.getElementById('turnBadge');
+  if (!gameStarted) {
+    badge.textContent = '開始前';
+  } else if (state.gameOver) {
+    badge.textContent = '終了';
+  } else {
+    badge.textContent = state.turn === HUMAN ? 'あなた' : 'CPU';
+  }
+}
+function displayToBoard(displayR, displayC) {
+  if (humanSide === 'gote') {
+    return { r: SIZE - 1 - displayR, c: SIZE - 1 - displayC };
+  }
+  return { r: displayR, c: displayC };
+}
+
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  const legalMap = new Map();
+  currentLegal = [];
+  if (state && !state.gameOver && state.turn === HUMAN && selected) {
+    const all = legalMoves(state, HUMAN, false);
+    currentLegal = all.filter(function(mv){ return sameSelectionMove(mv, selected); });
+    for (let i = 0; i < currentLegal.length; i++) {
+      const key = currentLegal[i].to.r + ',' + currentLegal[i].to.c;
+      legalMap.set(key, true);
+    }
+  }
+  for (let displayR = 0; displayR < SIZE; displayR++) {
+    for (let displayC = 0; displayC < SIZE; displayC++) {
+      const pos = displayToBoard(displayR, displayC);
+      const r = pos.r;
+      const c = pos.c;
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      if (r === promotionRow(HUMAN)) cell.classList.add('zoneHuman');
+      if (r === promotionRow(CPU)) cell.classList.add('zoneCpu');
+      cell.dataset.r = String(r);
+      cell.dataset.c = String(c);
+      if (selected && selected.kind === 'board' && selected.r === r && selected.c === c) cell.classList.add('selected');
+      const key = r + ',' + c;
+      if (legalMap.has(key)) {
+        cell.classList.add('legal');
+        if (state.board[r][c] && state.board[r][c].owner === CPU) cell.classList.add('capture');
+      }
+      if (lastMoveTo && lastMoveTo.r === r && lastMoveTo.c === c) {
+        const mark = document.createElement('div');
+        mark.className = 'lastMoveMark';
+        cell.appendChild(mark);
+      }
+      const p = state.board[r][c];
+      if (p) {
+        const piece = document.createElement('div');
+        piece.className = 'piece ' + (p.owner === CPU ? 'cpu' : 'human');
+        if (p.promoted) piece.classList.add('promoted');
+        if (p.type === 'K') piece.classList.add('king');
+        piece.textContent = pieceLabel(p);
+        cell.appendChild(piece);
+      }
+      cell.addEventListener('click', onCellClick);
+      boardEl.appendChild(cell);
+    }
+  }
+}
+function renderHands() {
+  renderHand('humanHand', HUMAN);
+  renderHand('cpuHand', CPU);
+}
+function renderHand(id, owner) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  for (let i = 0; i < HAND_TYPES.length; i++) {
+    const type = HAND_TYPES[i];
+    const count = state.hands[owner][type] || 0;
+    const btn = document.createElement('button');
+    btn.className = 'handBtn ' + (owner === HUMAN ? 'humanHandBtn' : 'cpuHandBtn');
+    if (count > 0) btn.classList.add('hasPiece');
+    btn.innerHTML = '<span class="handPieceName">' + PIECE_JA[type] + '</span><span class="handCount">' + count + '</span>';
+    if (!gameStarted || count <= 0 || owner !== HUMAN || state.turn !== HUMAN || state.gameOver) btn.classList.add('disabled');
+    if (selected && selected.kind === 'hand' && selected.type === type && owner === HUMAN) btn.classList.add('selected');
+    if (owner === HUMAN) {
+      btn.dataset.type = type;
+      btn.addEventListener('click', onHandClick);
+    }
+    el.appendChild(btn);
+  }
+}
+function renderLog() {
+  const el = document.getElementById('logList');
+  el.innerHTML = '';
+  for (let i = Math.max(0, state.log.length - 40); i < state.log.length; i++) {
+    const row = document.createElement('div');
+    row.className = 'logItem';
+    const no = document.createElement('div');
+    no.className = 'logNo';
+    no.textContent = String(i + 1);
+    const mv = document.createElement('div');
+    mv.textContent = state.log[i];
+    row.appendChild(no);
+    row.appendChild(mv);
+    el.appendChild(row);
+  }
+  el.scrollTop = el.scrollHeight;
+}
+function setMessage(html) {
+  document.getElementById('message').innerHTML = html;
+}
+function showResult(title, text, won) {
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultText').textContent = text;
+  document.getElementById('resultOverlay').classList.add('show');
+  if (won) soundWin(); else soundLose();
+}
+function hideResult() { document.getElementById('resultOverlay').classList.remove('show'); }
+function showStartOverlay() { document.getElementById('startOverlay').classList.add('show'); }
+function hideStartOverlay() { document.getElementById('startOverlay').classList.remove('show'); }
+function updateMainButtonText() {
+  const btn = document.getElementById('newGameBtn');
+  if (btn) btn.textContent = gameStarted ? 'NEW GAME' : 'GAME START';
+}
+function clearCpuTimer() {
+  if (cpuTimer) { clearTimeout(cpuTimer); cpuTimer = null; }
+}
+function resetToStartScreen() {
+  clearCpuTimer();
+  gameStarted = false;
+  state = initialState();
+  selected = null;
+  currentLegal = [];
+  pendingPromotion = null;
+  lastMoveTo = null;
+  hideResult();
+  showStartOverlay();
+  updateMainButtonText();
+  render();
+  setMessage('設定を選んでGAME STARTを押してください');
+  scaleApp();
+}
+
+function onCellClick(e) {
+  unlockAudio();
+  if (!gameStarted || !state || state.gameOver || state.turn !== HUMAN || pendingPromotion) return;
+  const r = Number(e.currentTarget.dataset.r);
+  const c = Number(e.currentTarget.dataset.c);
+  const p = state.board[r][c];
+  if (!selected) {
+    if (p && p.owner === HUMAN) {
+      selected = { kind: 'board', r: r, c: c };
+      setMessage('移動先を選んでください');
+      render();
+    }
+    return;
+  }
+  const candidates = currentLegal.filter(function(mv){ return mv.to.r === r && mv.to.c === c; });
+  if (candidates.length > 0) {
+    let unique = [];
+    const seen = new Set();
+    for (let i = 0; i < candidates.length; i++) {
+      const sig = moveSignature(candidates[i]);
+      if (!seen.has(sig)) { unique.push(candidates[i]); seen.add(sig); }
+    }
+    if (unique.length === 2) {
+      pendingPromotion = unique;
+      document.getElementById('promoteText').textContent = coord(r, c) + 'で成ることができます。';
+      document.getElementById('promoteModal').classList.add('show');
+      return;
+    }
+    doHumanMove(unique[0]);
+    return;
+  }
+  if (p && p.owner === HUMAN) {
+    selected = { kind: 'board', r: r, c: c };
+    setMessage('移動先を選んでください');
+    render();
+  } else {
+    selected = null;
+    setMessage('駒を選んでください');
+    render();
+  }
+}
+function onHandClick(e) {
+  unlockAudio();
+  if (!gameStarted || !state || state.gameOver || state.turn !== HUMAN || pendingPromotion) return;
+  const type = e.currentTarget.dataset.type;
+  if ((state.hands[HUMAN][type] || 0) <= 0) return;
+  selected = { kind: 'hand', type: type };
+  setMessage(PIECE_JA[type] + 'を打つ場所を選んでください');
+  render();
+}
+function choosePromotion(promote) {
+  if (!pendingPromotion) return;
+  const mv = pendingPromotion.find(function(m){ return !!m.promote === promote; }) || pendingPromotion[0];
+  pendingPromotion = null;
+  document.getElementById('promoteModal').classList.remove('show');
+  doHumanMove(mv);
+}
+function doHumanMove(move) {
+  const before = cloneState(state);
+  const captured = !!state.board[move.to.r][move.to.c];
+  state = applyMove(state, move);
+  state.log.push(moveNotation(move, before));
+  state.moveNo += 1;
+  lastMoveTo = { r: move.to.r, c: move.to.c };
+  selected = null;
+  if (captured) soundCapture(); else soundMove();
+  render();
+  if (afterMoveCheck(CPU)) return;
+  state.turn = CPU;
+  render();
+  setMessage('<span class="thinking">CPU思考中 <span class="dot"></span><span class="dot"></span><span class="dot"></span></span>');
+  clearCpuTimer();
+  cpuTimer = setTimeout(function(){ cpuTimer = null; cpuTurn(); }, 120);
+}
+function afterMoveCheck(sideToMove) {
+  const moves = legalMoves(state, sideToMove, false);
+  const checked = inCheck(state, sideToMove);
+  if (moves.length === 0) {
+    state.gameOver = true;
+    render();
+    if (sideToMove === CPU) {
+      stats.win += 1; saveStats(); updateStatsUI(); showResult('勝利', checked ? 'CPUを詰ませました' : 'CPUに合法手がありません', true);
+    } else {
+      stats.lose += 1; saveStats(); updateStatsUI(); showResult('敗北', checked ? 'あなたの玉が詰みました' : '合法手がありません', false);
+    }
+    return true;
+  }
+  if (checked) {
+    document.getElementById('boardWrap').classList.remove('checkFlash');
+    void document.getElementById('boardWrap').offsetWidth;
+    document.getElementById('boardWrap').classList.add('checkFlash');
+    soundCheck();
+    setMessage(sideToMove === HUMAN ? '王手です。玉を守ってください' : 'CPUに王手をかけました');
+  }
+  return false;
+}
+
+function evaluate(s) {
+  let score = 0;
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const p = s.board[r][c];
+      if (!p) continue;
+      let v = VALUES[p.type] || 0;
+      if (p.promoted) v += PROMO_BONUS[p.type] || 0;
+      if (p.type !== 'K') {
+        const advance = advancement(p.owner, r);
+        v += advance * 10;
+        if ((r === 2 && c === 2) || (r === 2 && (c === 1 || c === 3))) v += 15;
+      }
+      score += p.owner === CPU ? v : -v;
+    }
+  }
+  for (let i = 0; i < HAND_TYPES.length; i++) {
+    const t = HAND_TYPES[i];
+    score += (s.hands.C[t] || 0) * (VALUES[t] * 0.88);
+    score -= (s.hands.H[t] || 0) * (VALUES[t] * 0.88);
+  }
+  if (inCheck(s, HUMAN)) score += 80;
+  if (inCheck(s, CPU)) score -= 90;
+  return score;
+}
+function moveHeuristic(s, mv) {
+  let h = 0;
+  const target = s.board[mv.to.r][mv.to.c];
+  if (target) h += (VALUES[target.type] || 0) + (target.promoted ? (PROMO_BONUS[target.type] || 0) : 0) + 1000;
+  if (mv.promote) h += 420;
+  if (mv.drop) h += 30;
+  if (mv.type === 'K') h -= 20;
+  return h;
+}
+function orderedMoves(s, owner) {
+  const moves = legalMoves(s, owner, false);
+  moves.sort(function(a, b){ return moveHeuristic(s, b) - moveHeuristic(s, a); });
+  return moves;
+}
+function terminalScore(s, side, depth) {
+  if (inCheck(s, side)) return side === CPU ? -999999 - depth : 999999 + depth;
+  return side === CPU ? -1000 : 1000;
+}
+function searchMinimax(s, depth, alpha, beta, side, ctx) {
+  ctx.nodes++;
+  if ((ctx.nodes & 255) === 0 && performance.now() - ctx.start > ctx.limit) {
+    ctx.timeout = true;
+    return evaluate(s);
+  }
+  const key = makeKey(s, side, depth);
+  const cached = ctx.tt.get(key);
+  if (cached && cached.depth >= depth) return cached.score;
+  const moves = orderedMoves(s, side);
+  if (moves.length === 0) return terminalScore(s, side, depth);
+  if (depth <= 0) return evaluate(s);
+  let best;
+  if (side === CPU) {
+    best = -Infinity;
+    for (let i = 0; i < moves.length; i++) {
+      const ns = applyMove(s, moves[i]);
+      const val = searchMinimax(ns, depth - 1, alpha, beta, HUMAN, ctx);
+      if (ctx.timeout) return val;
+      if (val > best) best = val;
+      if (best > alpha) alpha = best;
+      if (beta <= alpha) break;
+    }
+  } else {
+    best = Infinity;
+    for (let j = 0; j < moves.length; j++) {
+      const ns2 = applyMove(s, moves[j]);
+      const val2 = searchMinimax(ns2, depth - 1, alpha, beta, CPU, ctx);
+      if (ctx.timeout) return val2;
+      if (val2 < best) best = val2;
+      if (best < beta) beta = best;
+      if (beta <= alpha) break;
+    }
+  }
+  ctx.tt.set(key, { depth: depth, score: best });
+  return best;
+}
+function makeKey(s, side, depth) {
+  let parts = [side, String(depth)];
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const p = s.board[r][c];
+      parts.push(p ? p.owner + p.type + (p.promoted ? '+' : '-') : '..');
+    }
+  }
+  for (let i = 0; i < HAND_TYPES.length; i++) {
+    const t = HAND_TYPES[i];
+    parts.push('H' + t + (s.hands.H[t] || 0));
+    parts.push('C' + t + (s.hands.C[t] || 0));
+  }
+  return parts.join('');
+}
+function chooseMoveAI(s, difficulty) {
+  const moves = orderedMoves(s, CPU);
+  if (moves.length === 0) return null;
+  if (difficulty === 'easy') {
+    let best = moves[0];
+    let bestScore = -Infinity;
+    for (let i = 0; i < moves.length; i++) {
+      const ns = applyMove(s, moves[i]);
+      let val = evaluate(ns) + (Math.random() * 180 - 90);
+      if (Math.random() < 0.14) val += Math.random() * 300;
+      if (val > bestScore) { bestScore = val; best = moves[i]; }
+    }
+    return best;
+  }
+  const config = difficulty === 'hard'
+    ? { maxDepth: 8, limit: 2600, randomness: 0 }
+    : { maxDepth: 3, limit: 900, randomness: 25 };
+  let bestMove = moves[0];
+  let completedBest = bestMove;
+  const ctx = { start: performance.now(), limit: config.limit, timeout: false, nodes: 0, tt: new Map() };
+  for (let depth = 1; depth <= config.maxDepth; depth++) {
+    let bestScore = -Infinity;
+    let localBest = bestMove;
+    const ordered = moves.slice();
+    if (completedBest) {
+      ordered.sort(function(a, b){ return (moveSignature(a) === moveSignature(completedBest) ? -1 : 0) - (moveSignature(b) === moveSignature(completedBest) ? -1 : 0); });
+    }
+    for (let i = 0; i < ordered.length; i++) {
+      if (performance.now() - ctx.start > config.limit) { ctx.timeout = true; break; }
+      const ns = applyMove(s, ordered[i]);
+      let val = searchMinimax(ns, depth - 1, -Infinity, Infinity, HUMAN, ctx);
+      if (config.randomness) val += Math.random() * config.randomness;
+      if (ctx.timeout) break;
+      if (val > bestScore) { bestScore = val; localBest = ordered[i]; }
+    }
+    if (ctx.timeout) break;
+    completedBest = localBest;
+    bestMove = localBest;
+  }
+  return completedBest || bestMove;
+}
+function cpuTurn() {
+  if (!state || state.gameOver || state.turn !== CPU) return;
+  const difficulty = document.getElementById('difficulty').value;
+  const before = cloneState(state);
+  const mv = chooseMoveAI(state, difficulty);
+  if (!mv) {
+    state.gameOver = true;
+    stats.win += 1; saveStats(); updateStatsUI(); render(); showResult('勝利', 'CPUに合法手がありません', true);
+    return;
+  }
+  const captured = !!state.board[mv.to.r][mv.to.c];
+  state = applyMove(state, mv);
+  state.log.push(moveNotation(mv, before));
+  state.moveNo += 1;
+  lastMoveTo = { r: mv.to.r, c: mv.to.c };
+  if (captured) soundCapture(); else soundMove();
+  render();
+  if (afterMoveCheck(HUMAN)) return;
+  setMessage('あなたの番です。駒を選んでください');
+}
+
+function startCpuIfNeeded() {
+  if (!gameStarted || !state || state.gameOver) return;
+  clearCpuTimer();
+  if (state.turn === CPU) {
+    setMessage('<span class="thinking">CPU思考中 <span class="dot"></span><span class="dot"></span><span class="dot"></span></span>');
+    render();
+    cpuTimer = setTimeout(function(){ cpuTimer = null; cpuTurn(); }, 180);
+  } else {
+    setMessage('あなたの番です。駒を選んでください');
+    render();
+  }
+}
+function newGame() {
+  unlockAudio();
+  clearCpuTimer();
+  gameStarted = true;
+  state = initialState();
+  selected = null;
+  currentLegal = [];
+  pendingPromotion = null;
+  lastMoveTo = null;
+  hideResult();
+  hideStartOverlay();
+  updateMainButtonText();
+  startCpuIfNeeded();
+  scaleApp();
+}
+
+function scaleApp() {
+  const root = document.getElementById('app-root');
+  if (!root) return;
+  root.style.transform = 'scale(1)';
+  const naturalW = root.offsetWidth;
+  const naturalH = root.offsetHeight;
+  const scale = Math.min(
+    1,
+    window.innerWidth / (naturalW + 16),
+    window.innerHeight / (naturalH + 16)
+  );
+  root.style.transform = 'scale(' + scale + ')';
+}
+
+document.getElementById('newGameBtn').addEventListener('click', newGame);
+document.getElementById('startGameBtn').addEventListener('click', newGame);
+document.getElementById('overlayRestart').addEventListener('click', newGame);
+document.getElementById('difficulty').addEventListener('change', function(e) {
+  storageSet('gogoShogiDifficulty', e.target.value);
+  if (gameStarted) {
+    setMessage('難易度を変更しました。次のCPU手から反映されます');
+  } else {
+    setMessage('設定を選んでGAME STARTを押してください');
+  }
+});
+document.getElementById('playerSide').addEventListener('change', function(e) {
+  humanSide = e.target.value === 'gote' ? 'gote' : 'sente';
+  storageSet('gogoShogiPlayerSide', humanSide);
+  updateSideUI();
+  if (gameStarted) {
+    newGame();
+  } else {
+    resetToStartScreen();
+  }
+});
+document.getElementById('soundBtn').addEventListener('click', function() {
+  audioUnlocked = true;
+  soundOn = !soundOn;
+  storageSet('gogoShogiSound', soundOn ? 'on' : 'off');
+  updateSoundButton();
+  if (soundOn) { tone(660, 0.08, 'triangle', 0.04); }
+});
+document.getElementById('promoteYes').addEventListener('click', function(){ choosePromotion(true); });
+document.getElementById('promoteNo').addEventListener('click', function(){ choosePromotion(false); });
+window.addEventListener('keydown', function(e) {
+  const target = e.target;
+  const inFormControl = target && target.closest && target.closest('select, button, input, textarea');
+  if (!gameStarted && (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') && !inFormControl) {
+    e.preventDefault();
+    newGame();
+    return;
+  }
+  if (e.key === 'Escape') {
+    selected = null;
+    pendingPromotion = null;
+    document.getElementById('promoteModal').classList.remove('show');
+    setMessage(gameStarted ? '駒を選んでください' : '設定を選んでGAME STARTを押してください');
+    render();
+  }
+  if ((e.key === 'r' || e.key === 'R') && gameStarted) newGame();
+  if (e.key === 'Enter' && state && state.gameOver) newGame();
+});
+document.body.focus();
+window.addEventListener('click', function(e){
+  if (e.target && e.target.closest && e.target.closest('select, button, .modal')) return;
+  document.body.focus();
+});
+window.addEventListener('resize', scaleApp);
+
+loadStats();
+resetToStartScreen();
+scaleApp();
+</script>
+</body>
+</html>

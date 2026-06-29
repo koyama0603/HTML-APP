@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>翻訳ツール</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1a1f2e;
+      --paper: #f7f5f0;
+      --cream: #ede9e1;
+      --border: #d4cfc6;
+      --accent: #2d6a4f;
+      --accent-light: #52b788;
+      --muted: #7a7570;
+      --red: #c0392b;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-md: 0 8px 32px rgba(0,0,0,0.10);
+      --r: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'DM Sans', 'Zen Kaku Gothic New', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 14px 12px 18px;
+    }
+
+    /* ─── Header ─── */
+    header {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+    }
+
+    /* ─── Engine switcher ─── */
+    .engine-switcher {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .engine-tabs {
+      display: flex;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 3px;
+      gap: 3px;
+      box-shadow: var(--shadow-sm);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .engine-tab {
+      padding: 5px 11px;
+      border: none;
+      border-radius: 7px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .engine-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .engine-tab:not(.active):hover {
+      background: var(--cream);
+      color: var(--ink);
+    }
+
+    /* ─── Card ─── */
+    .card {
+      max-width: 820px;
+      margin: 0 auto;
+      width: 100%;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    /* ─── Lang bar ─── */
+    .lang-bar {
+      display: grid;
+      grid-template-columns: 1fr 40px 1fr;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--cream);
+    }
+
+    .lang-select {
+      appearance: none;
+      border: none;
+      background: transparent;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      padding: 9px 34px 9px 12px;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7570' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 11px center;
+      outline: none;
+      width: 100%;
+    }
+
+    .lang-select:focus { background-color: rgba(45,106,79,0.06); }
+    .lang-left  { border-right: 1px solid var(--border); }
+    .lang-right { border-left:  1px solid var(--border); }
+
+    .swap-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .swap-btn {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 14px;
+      transition: background 0.15s, transform 0.2s;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .swap-btn:hover { background: var(--cream); transform: rotate(180deg); }
+
+    /* ─── Text panels ─── */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .panel + .panel { border-left: 1px solid var(--border); }
+
+    textarea, .output-box {
+      flex: 1;
+      width: 100%;
+      height: 8.1em;
+      min-height: 8.1em;
+      max-height: 8.1em;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--ink);
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+    }
+
+    textarea::placeholder { color: var(--border); }
+
+    .output-box {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: var(--ink);
+    }
+
+    .output-box:empty::before {
+      content: "翻訳結果がここに表示されます";
+      color: var(--border);
+    }
+
+    .panel-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 10px;
+      border-top: 1px solid var(--border);
+      min-height: 30px;
+    }
+
+    .counter {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .icon-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px 7px;
+      border-radius: 6px;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .icon-btn:hover { background: var(--cream); color: var(--ink); }
+    .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ─── Email row (MyMemory only) ─── */
+    .extra-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-top: 1px solid var(--border);
+      background: #fff;
+      overflow: hidden;
+      max-height: 44px;
+      transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+      opacity: 1;
+    }
+
+    .extra-row.hidden {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-top-color: transparent;
+    }
+
+    .extra-row label {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .extra-row input[type="email"] {
+      flex: 1;
+      font: inherit;
+      font-size: 12px;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--paper);
+      color: var(--ink);
+      outline: none;
+      max-width: 280px;
+    }
+
+    .extra-row input[type="email"]:focus { border-color: var(--accent-light); }
+
+    .extra-hint {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ─── Actions ─── */
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 9px 12px;
+      border-top: 1px solid var(--border);
+      background: var(--cream);
+      flex-wrap: wrap;
+    }
+
+    .actions-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .translate-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 18px;
+      height: 36px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.02em;
+    }
+
+    .translate-btn:hover { background: var(--accent-light); }
+    .translate-btn:active { transform: scale(0.98); }
+    .translate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ─── Status ─── */
+    #status {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 2px 0;
+      flex: 1;
+    }
+
+    #status.ok    { color: var(--accent); }
+    #status.error { color: var(--red); }
+
+
+    /* ─── Compact overrides ─── */
+    .lang-select { min-height: 38px; }
+    .panels { min-height: 0; }
+    .output-box { overflow-y: auto; }
+    textarea { overflow-y: auto; }
+    .extra-hint { font-size: 10px; }
+    .actions-right { gap: 6px; }
+    .translate-btn span:last-child { font-size: 15px !important; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 600px) {
+      body { padding: 10px 8px 16px; }
+      .panels { grid-template-columns: 1fr; }
+      .panel + .panel { border-left: none; border-top: 1px solid var(--border); }
+      .lang-bar { grid-template-columns: 1fr 40px 1fr; }
+      .extra-row { flex-wrap: wrap; }
+      .extra-row input[type="email"] { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🌐 翻訳ツール</h1>
+  </header>
+
+  <!-- Engine switcher -->
+  <div class="engine-switcher">
+    <div class="engine-tabs">
+      <button class="engine-tab active" data-engine="google">Google (非公式)</button>
+      <button class="engine-tab"        data-engine="mymemory">MyMemory</button>
+      <button class="engine-tab"        data-engine="lingva">Lingva</button>
+      <button class="engine-tab"        data-engine="libre">LibreTranslate</button>
+    </div>
+  </div>
+
+  <div class="card">
+
+    <!-- Language selector -->
+    <div class="lang-bar">
+      <div class="lang-left">
+        <select class="lang-select" id="sourceLang"></select>
+      </div>
+      <div class="swap-wrap">
+        <button class="swap-btn" id="swapBtn" title="言語を入れ替え">⇄</button>
+      </div>
+      <div class="lang-right">
+        <select class="lang-select" id="targetLang"></select>
+      </div>
+    </div>
+
+    <!-- Text panels -->
+    <div class="panels">
+      <div class="panel">
+        <textarea id="sourceText" placeholder="翻訳したい文章を入力してください"></textarea>
+        <div class="panel-footer">
+          <span id="sourceCounter" class="counter">0 文字</span>
+          <button class="icon-btn" id="clearBtn">✕ クリア</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="output-box" id="translatedText"></div>
+        <div class="panel-footer">
+          <span id="subInfo" class="counter"></span>
+          <button class="icon-btn" id="copyBtn">⎘ コピー</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email row (MyMemory only) -->
+    <div class="extra-row" id="emailRow">
+      <label for="email">メールアドレス（任意）</label>
+      <input id="email" type="email" placeholder="入力すると1日の翻訳上限が増えます">
+      <span class="extra-hint">※ MyMemory に送信され、無料枠の上限が緩和されます</span>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <span id="status">準備完了</span>
+      <div class="actions-right">
+        <button class="icon-btn" id="reloadLangBtn" style="display:none">↺ 言語を再取得</button>
+        <button class="translate-btn" id="translateBtn">
+          <span>翻訳する</span>
+          <span style="font-size:18px">→</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════
+    // 言語リスト定義
+    // ═══════════════════════════════════════════════════════
+    const LANGS_MYMEMORY = [
+      { code:"ja", name:"日本語" }, { code:"en", name:"英語" },
+      { code:"zh-CN", name:"中国語（簡体）" }, { code:"zh-TW", name:"中国語（繁体）" },
+      { code:"ko", name:"韓国語" }, { code:"fr", name:"フランス語" },
+      { code:"de", name:"ドイツ語" }, { code:"es", name:"スペイン語" },
+      { code:"it", name:"イタリア語" }, { code:"pt", name:"ポルトガル語" },
+      { code:"ru", name:"ロシア語" }, { code:"uk", name:"ウクライナ語" },
+      { code:"tr", name:"トルコ語" }, { code:"vi", name:"ベトナム語" },
+      { code:"th", name:"タイ語" }, { code:"id", name:"インドネシア語" },
+      { code:"ms", name:"マレー語" }, { code:"hi", name:"ヒンディー語" },
+      { code:"ar", name:"アラビア語" }, { code:"nl", name:"オランダ語" },
+      { code:"sv", name:"スウェーデン語" }, { code:"pl", name:"ポーランド語" },
+    ];
+
+    const LANGS_LINGVA = [
+      { code:"auto", name:"自動判定" },
+      { code:"ja", name:"日本語" }, { code:"en", name:"英語" },
+      { code:"zh", name:"中国語" }, { code:"ko", name:"韓国語" },
+      { code:"fr", name:"フランス語" }, { code:"de", name:"ドイツ語" },
+      { code:"es", name:"スペイン語" }, { code:"it", name:"イタリア語" },
+      { code:"pt", name:"ポルトガル語" }, { code:"ru", name:"ロシア語" },
+      { code:"uk", name:"ウクライナ語" }, { code:"tr", name:"トルコ語" },
+      { code:"vi", name:"ベトナム語" }, { code:"th", name:"タイ語" },
+      { code:"id", name:"インドネシア語" }, { code:"hi", name:"ヒンディー語" },
+      { code:"ar", name:"アラビア語" }, { code:"nl", name:"オランダ語" },
+      { code:"sv", name:"スウェーデン語" }, { code:"pl", name:"ポーランド語" },
+    ];
+
+    const LANGS_GOOGLE = [
+      { code:"auto", name:"自動判定" },
+      { code:"ja", name:"日本語" }, { code:"en", name:"英語" },
+      { code:"zh-CN", name:"中国語（簡体）" }, { code:"zh-TW", name:"中国語（繁体）" },
+      { code:"ko", name:"韓国語" }, { code:"fr", name:"フランス語" },
+      { code:"de", name:"ドイツ語" }, { code:"es", name:"スペイン語" },
+      { code:"it", name:"イタリア語" }, { code:"pt", name:"ポルトガル語" },
+      { code:"ru", name:"ロシア語" }, { code:"uk", name:"ウクライナ語" },
+      { code:"tr", name:"トルコ語" }, { code:"vi", name:"ベトナム語" },
+      { code:"th", name:"タイ語" }, { code:"id", name:"インドネシア語" },
+      { code:"hi", name:"ヒンディー語" }, { code:"ar", name:"アラビア語" },
+      { code:"nl", name:"オランダ語" }, { code:"sv", name:"スウェーデン語" },
+      { code:"pl", name:"ポーランド語" },
+    ];
+
+    // LibreTranslate: APIから動的取得、フォールバック用静的リスト
+    const LANGS_LIBRE_FALLBACK = [
+      { code:"en", name:"English" }, { code:"ja", name:"Japanese" },
+      { code:"zh", name:"Chinese" }, { code:"ko", name:"Korean" },
+      { code:"fr", name:"French" }, { code:"de", name:"German" },
+      { code:"es", name:"Spanish" }, { code:"it", name:"Italian" },
+      { code:"pt", name:"Portuguese" }, { code:"ru", name:"Russian" },
+      { code:"uk", name:"Ukrainian" }, { code:"tr", name:"Turkish" },
+      { code:"vi", name:"Vietnamese" }, { code:"ar", name:"Arabic" },
+      { code:"nl", name:"Dutch" }, { code:"pl", name:"Polish" },
+    ];
+
+    // ═══════════════════════════════════════════════════════
+    // 定数
+    // ═══════════════════════════════════════════════════════
+    const MYMEMORY_ENDPOINT  = "https://api.mymemory.translated.net/get";
+    const LINGVA_INSTANCE    = "https://lingva.ml";
+    const GOOGLE_ENDPOINT    = "https://translate.googleapis.com/translate_a/single";
+    const LIBRE_BASE         = "https://translate.fedilab.app";
+
+    const MAX_BYTES_MYMEMORY = 480;
+    const MAX_CHARS_LINGVA   = 900;
+    const MAX_CHARS_GOOGLE   = 1200;
+    const MAX_CHARS_LIBRE    = 1000;
+
+    // ═══════════════════════════════════════════════════════
+    // DOM
+    // ═══════════════════════════════════════════════════════
+    const sourceLang     = document.getElementById("sourceLang");
+    const targetLang     = document.getElementById("targetLang");
+    const sourceText     = document.getElementById("sourceText");
+    const translatedText = document.getElementById("translatedText");
+    const translateBtn   = document.getElementById("translateBtn");
+    const copyBtn        = document.getElementById("copyBtn");
+    const clearBtn       = document.getElementById("clearBtn");
+    const swapBtn        = document.getElementById("swapBtn");
+    const statusEl       = document.getElementById("status");
+    const sourceCounter  = document.getElementById("sourceCounter");
+    const subInfo        = document.getElementById("subInfo");
+    const emailRow       = document.getElementById("emailRow");
+    const emailInput     = document.getElementById("email");
+    const reloadLangBtn  = document.getElementById("reloadLangBtn");
+    const engineTabs     = document.querySelectorAll(".engine-tab");
+
+    // ═══════════════════════════════════════════════════════
+    // 状態
+    // ═══════════════════════════════════════════════════════
+    let currentEngine = "google";
+    let libreLanguages = null; // 取得済みキャッシュ
+
+    const encoder = new TextEncoder();
+    const byteLen = t => encoder.encode(t).length;
+
+    // ═══════════════════════════════════════════════════════
+    // ストレージ
+    // ═══════════════════════════════════════════════════════
+    function getStorage() {
+      try { return window.localStorage; } catch { return null; }
+    }
+
+    function saveSettings() {
+      const s = getStorage(); if (!s) return;
+      try {
+        s.setItem("unified-translator-v3-compact", JSON.stringify({
+          engine: currentEngine,
+          source: sourceLang.value,
+          target: targetLang.value,
+          email: emailInput.value,
+        }));
+      } catch {}
+    }
+
+    function loadSettings() {
+      const s = getStorage(); if (!s) return;
+      try {
+        const raw = s.getItem("unified-translator-v3-compact");
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        // エンジン復元 (言語リスト構築後に呼ばれるため source/target だけ)
+        if (d.source && [...sourceLang.options].some(o => o.value === d.source)) sourceLang.value = d.source;
+        if (d.target && [...targetLang.options].some(o => o.value === d.target)) targetLang.value = d.target;
+        if (d.email) emailInput.value = d.email;
+        return d.engine || "google";
+      } catch {}
+      return "google";
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // 言語セレクタ構築
+    // ═══════════════════════════════════════════════════════
+    function fillLanguages(langs, hasAuto) {
+      const prevSrc = sourceLang.value;
+      const prevTgt = targetLang.value;
+      sourceLang.innerHTML = "";
+      targetLang.innerHTML = "";
+
+      langs.forEach(l => {
+        const o = document.createElement("option");
+        o.value = l.code; o.textContent = l.name;
+        sourceLang.appendChild(o);
+        if (l.code !== "auto") {
+          const o2 = document.createElement("option");
+          o2.value = l.code; o2.textContent = l.name;
+          targetLang.appendChild(o2);
+        }
+      });
+
+      // デフォルト値
+      sourceLang.value = hasAuto ? "auto" : "en";
+      targetLang.value = "ja";
+
+      // 前の値を可能な限り引き継ぐ（autoは引き継がない）
+      if (prevSrc && prevSrc !== "auto" && [...sourceLang.options].some(o => o.value === prevSrc)) sourceLang.value = prevSrc;
+      if (prevTgt && [...targetLang.options].some(o => o.value === prevTgt)) targetLang.value = prevTgt;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // エンジン切り替え
+    // ═══════════════════════════════════════════════════════
+    async function switchEngine(engine, save = true) {
+      currentEngine = engine;
+
+      engineTabs.forEach(tab => tab.classList.toggle("active", tab.dataset.engine === engine));
+
+      // メールアドレス欄: MyMemoryのみ表示
+      emailRow.classList.toggle("hidden", engine !== "mymemory");
+
+      // 言語再取得ボタン: LibreTranslateのみ表示
+      reloadLangBtn.style.display = engine === "libre" ? "" : "none";
+
+      // 言語リスト切り替え
+      if (engine === "mymemory") {
+        fillLanguages(LANGS_MYMEMORY, false);
+      } else if (engine === "lingva") {
+        fillLanguages(LANGS_LINGVA, true);
+      } else if (engine === "google") {
+        fillLanguages(LANGS_GOOGLE, true);
+      } else if (engine === "libre") {
+        if (libreLanguages) {
+          fillLanguages(libreLanguages, true);
+        } else {
+          fillLanguages(LANGS_LIBRE_FALLBACK.map(l => ({ ...l })), true);
+          await fetchLibreLanguages();
+        }
+      }
+
+      // 結果リセット
+      translatedText.textContent = "";
+      subInfo.textContent = "";
+      setStatus("準備完了");
+
+      if (save) saveSettings();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // LibreTranslate 言語リスト取得
+    // ═══════════════════════════════════════════════════════
+    async function fetchLibreLanguages() {
+      setStatus("言語リストを取得中...");
+      try {
+        const res = await fetch(`${LIBRE_BASE}/languages`, { headers: { Accept: "application/json" } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0) throw new Error("空のレスポンス");
+
+        libreLanguages = [{ code:"auto", name:"自動判定" }, ...data];
+        fillLanguages(libreLanguages, true);
+        setStatus(`言語リスト取得完了 (${data.length}件)`, "ok");
+      } catch (e) {
+        setStatus(`言語リスト取得失敗 — 既定リストで動作中`, "");
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // ステータス / カウンター
+    // ═══════════════════════════════════════════════════════
+    function setStatus(msg, type = "") {
+      statusEl.textContent = msg;
+      statusEl.className = type;
+    }
+
+    function updateCounter() {
+      sourceCounter.textContent = `${sourceText.value.length.toLocaleString()} 文字`;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // チャンク分割
+    // ═══════════════════════════════════════════════════════
+    function splitByBytes(text, max) {
+      const norm = text.replace(/\r\n/g, "\n").trim();
+      if (!norm) return [];
+      const tokens = norm.split(/(\n{2,}|(?<=[。．！？!?])\s*|(?<=[.!?])\s+)/).filter(Boolean);
+      const chunks = []; let cur = "";
+      for (const tok of tokens) {
+        if (byteLen(tok) > max) {
+          if (cur) { chunks.push(cur); cur = ""; }
+          for (const ch of tok) {
+            const c = cur + ch;
+            if (cur && byteLen(c) > max) { chunks.push(cur); cur = ch; } else cur = c;
+          }
+          continue;
+        }
+        const c = cur + tok;
+        if (cur && byteLen(c) > max) { chunks.push(cur); cur = tok; } else cur = c;
+      }
+      if (cur) chunks.push(cur);
+      return chunks.map(c => c.trim()).filter(Boolean);
+    }
+
+    function splitByChars(text, max) {
+      const norm = text.replace(/\r\n/g, "\n").trim();
+      if (!norm) return [];
+      const tokens = norm.split(/(\n{2,}|(?<=[。．！？!?])\s*|(?<=[.!?])\s+)/).filter(Boolean);
+      const chunks = []; let cur = "";
+      for (const tok of tokens) {
+        if (tok.length > max) {
+          if (cur) { chunks.push(cur.trim()); cur = ""; }
+          for (let i = 0; i < tok.length; i += max) chunks.push(tok.slice(i, i + max).trim());
+          continue;
+        }
+        const c = cur + tok;
+        if (cur && c.length > max) { chunks.push(cur.trim()); cur = tok; } else cur = c;
+      }
+      if (cur.trim()) chunks.push(cur.trim());
+      return chunks.filter(Boolean);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // API 呼び出し (エンジン別)
+    // ═══════════════════════════════════════════════════════
+    async function callMyMemory(chunk, src, tgt) {
+      const url = new URL(MYMEMORY_ENDPOINT);
+      url.searchParams.set("q", chunk);
+      url.searchParams.set("langpair", `${src}|${tgt}`);
+      url.searchParams.set("mt", "1");
+      const email = emailInput.value.trim();
+      if (email) url.searchParams.set("de", email);
+
+      const res  = await fetch(url.toString());
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (Number(data.responseStatus) >= 400) throw new Error(data.responseDetails || "翻訳エラー");
+      const text = data.responseData?.translatedText;
+      if (typeof text !== "string") throw new Error("翻訳結果が取得できませんでした");
+
+      const bestMatch = Array.isArray(data.matches)
+        ? data.matches.filter(m => typeof m.match === "number").sort((a,b) => b.match - a.match)[0]
+        : null;
+
+      const el = document.createElement("textarea");
+      el.innerHTML = text;
+      return { text: el.value, match: bestMatch?.match };
+    }
+
+    async function callLingva(chunk, src, tgt) {
+      const url = `${LINGVA_INSTANCE}/api/v1/${encodeURIComponent(src)}/${encodeURIComponent(tgt)}/${encodeURIComponent(chunk)}`;
+      const res  = await fetch(url, { headers: { Accept: "application/json" } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+      if (typeof data.translation !== "string") throw new Error("翻訳結果が取得できませんでした");
+      return { text: data.translation, detected: data.info?.detectedSource || null };
+    }
+
+    async function callGoogle(chunk, src, tgt) {
+      const url = new URL(GOOGLE_ENDPOINT);
+      url.searchParams.set("client", "gtx");
+      url.searchParams.set("sl", src);
+      url.searchParams.set("tl", tgt);
+      url.searchParams.set("dt", "t");
+      url.searchParams.set("ie", "UTF-8");
+      url.searchParams.set("oe", "UTF-8");
+      url.searchParams.set("q", chunk);
+
+      const res  = await fetch(url.toString(), { headers: { Accept: "application/json, */*" } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error("想定外のレスポンス形式");
+      const parts = Array.isArray(data[0])
+        ? data[0].filter(p => Array.isArray(p) && typeof p[0] === "string").map(p => p[0])
+        : [];
+      if (!parts.length) throw new Error("翻訳結果が取得できませんでした");
+      return { text: parts.join(""), detected: typeof data[2] === "string" ? data[2] : null };
+    }
+
+    async function callLibre(chunk, src, tgt) {
+      const body = new URLSearchParams();
+      body.set("q", chunk); body.set("source", src);
+      body.set("target", tgt); body.set("format", "text");
+
+      const res  = await fetch(`${LIBRE_BASE}/translate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", Accept: "application/json" },
+        body
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+      if (typeof data.translatedText !== "string") throw new Error("翻訳結果が取得できませんでした");
+      return { text: data.translatedText, detected: data.detectedLanguage?.language || null };
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // メイン翻訳
+    // ═══════════════════════════════════════════════════════
+    async function translate() {
+      const text = sourceText.value.trim();
+      if (!text) { setStatus("文章を入力してください", "error"); return; }
+
+      const src = sourceLang.value;
+      const tgt = targetLang.value;
+
+      if (src !== "auto" && src === tgt) {
+        translatedText.textContent = text; setStatus("同じ言語が選択されています"); return;
+      }
+
+      let chunks, callFn, showMatch = false;
+
+      if (currentEngine === "mymemory") {
+        chunks = splitByBytes(text, MAX_BYTES_MYMEMORY); callFn = callMyMemory; showMatch = true;
+      } else if (currentEngine === "lingva") {
+        chunks = splitByChars(text, MAX_CHARS_LINGVA); callFn = callLingva;
+      } else if (currentEngine === "google") {
+        chunks = splitByChars(text, MAX_CHARS_GOOGLE); callFn = callGoogle;
+      } else {
+        chunks = splitByChars(text, MAX_CHARS_LIBRE); callFn = callLibre;
+      }
+
+      if (!chunks.length) return;
+
+      translateBtn.disabled = true;
+      translateBtn.querySelector("span").textContent = "翻訳中...";
+      translatedText.textContent = "";
+      subInfo.textContent = "";
+      setStatus(chunks.length > 1 ? `翻訳中… 0/${chunks.length}` : "翻訳中…");
+
+      try {
+        const results = [];
+        for (let i = 0; i < chunks.length; i++) {
+          if (chunks.length > 1) setStatus(`翻訳中… ${i+1}/${chunks.length}`);
+          const r = await callFn(chunks[i], src, tgt);
+          results.push(r);
+          translatedText.textContent = results.map(r => r.text).join("\n");
+        }
+
+        if (showMatch) {
+          const matches = results.map(r => r.match).filter(v => typeof v === "number");
+          if (matches.length) {
+            const avg = matches.reduce((s,v) => s+v, 0) / matches.length;
+            subInfo.textContent = `一致率 ${Math.round(avg*100)}%`;
+          }
+        } else {
+          const detected = results.map(r => r.detected).find(Boolean);
+          if (detected) subInfo.textContent = `検出言語: ${detected}`;
+        }
+
+        setStatus("翻訳完了", "ok");
+        saveSettings();
+      } catch (e) {
+        setStatus(`エラー: ${e.message}`, "error");
+      } finally {
+        translateBtn.disabled = false;
+        translateBtn.querySelector("span").textContent = "翻訳する";
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // その他の操作
+    // ═══════════════════════════════════════════════════════
+    async function copyResult() {
+      const t = translatedText.textContent.trim();
+      if (!t) { setStatus("コピーする結果がありません", "error"); return; }
+      try { await navigator.clipboard.writeText(t); setStatus("コピーしました", "ok"); }
+      catch { setStatus("コピーに失敗しました", "error"); }
+    }
+
+    function clearAll() {
+      sourceText.value = "";
+      translatedText.textContent = "";
+      subInfo.textContent = "";
+      updateCounter();
+      setStatus("クリアしました");
+    }
+
+    function swapLanguages() {
+      if (sourceLang.value === "auto") { setStatus("自動判定の場合は入れ替えできません"); return; }
+      const src = sourceLang.value;
+      sourceLang.value = targetLang.value;
+      targetLang.value = src;
+      const cur = sourceText.value;
+      const out = translatedText.textContent;
+      if (out.trim()) { sourceText.value = out; translatedText.textContent = cur; }
+      updateCounter();
+      saveSettings();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // イベント
+    // ═══════════════════════════════════════════════════════
+    engineTabs.forEach(tab => {
+      tab.addEventListener("click", () => switchEngine(tab.dataset.engine));
+    });
+
+    reloadLangBtn.addEventListener("click", async () => {
+      libreLanguages = null;
+      await fetchLibreLanguages();
+    });
+
+    translateBtn.addEventListener("click", translate);
+    copyBtn.addEventListener("click", copyResult);
+    clearBtn.addEventListener("click", clearAll);
+    swapBtn.addEventListener("click", swapLanguages);
+    sourceText.addEventListener("input", updateCounter);
+    [sourceLang, targetLang].forEach(el => el.addEventListener("change", saveSettings));
+    emailInput.addEventListener("change", saveSettings);
+
+    sourceText.addEventListener("keydown", e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); translate(); }
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // 初期化
+    // ═══════════════════════════════════════════════════════
+    (async () => {
+      // まずデフォルトエンジン(google)で言語リストを構築
+      fillLanguages(LANGS_GOOGLE, true);
+
+      // 保存済み設定からエンジンを読む
+      const s = getStorage();
+      let savedEngine = "google";
+      if (s) {
+        try {
+          const raw = s.getItem("unified-translator-v3-compact");
+          if (raw) { const d = JSON.parse(raw); savedEngine = d.engine || "mymemory"; }
+        } catch {}
+      }
+
+      // 保存されたエンジンで再初期化（言語リスト再構築＋設定復元）
+      await switchEngine(savedEngine, false);
+      loadSettings();
+      updateCounter();
+    })();
+  </script>
+</body>
+</html>

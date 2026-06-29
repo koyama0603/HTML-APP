@@ -1,0 +1,3155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>寿司タイピング v20</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg0: #fff8e8;
+    --bg1: #f3cf90;
+    --panel: rgba(255, 253, 246, 0.94);
+    --panel2: rgba(255, 248, 229, 0.96);
+    --ink: #2f261d;
+    --muted: #806a55;
+    --accent: #c7352a;
+    --accent2: #087f7a;
+    --good: #0d8a67;
+    --bad: #d33a42;
+    --steel: #6f7d79;
+    --lacquer: #a92520;
+    --wood: #9b6538;
+    --paper: #fffaf0;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    background:
+      repeating-linear-gradient(90deg, rgba(116, 76, 39, .055) 0 1px, transparent 1px 38px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.30) 0 1px, transparent 1px 18px),
+      linear-gradient(135deg, #fffaf0 0%, #f4d391 52%, #d99659 100%);
+    color: var(--ink);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    user-select: none;
+  }
+
+  #app-root {
+    width: 1060px;
+    height: 700px;
+    transform-origin: center center;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .game-shell {
+    width: 100%;
+    height: 100%;
+    border: 3px solid rgba(117, 50, 29, .38);
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 1px, transparent 1px 34px),
+      linear-gradient(180deg, rgba(255,255,255,.76), rgba(255,245,220,.36)),
+      linear-gradient(180deg, #fff4d8 0%, #fee4b2 52%, #c78045 100%);
+    box-shadow: 0 30px 78px rgba(82, 44, 17, .32), inset 0 1px 0 rgba(255,255,255,.86);
+  }
+  .game-shell::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    left: -30px;
+    right: -30px;
+    top: -18px;
+    height: 84px;
+    background:
+      repeating-linear-gradient(90deg, #c84031 0 88px, #f7efe0 88px 130px),
+      linear-gradient(180deg, rgba(255,255,255,.20), rgba(0,0,0,.04));
+    box-shadow: 0 10px 20px rgba(120, 42, 20, .14);
+    opacity: .18;
+    pointer-events: none;
+  }
+  .game-shell::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 180px;
+    background:
+      repeating-linear-gradient(8deg, rgba(88, 44, 18, .10) 0 2px, transparent 2px 34px),
+      linear-gradient(180deg, rgba(255,255,255,0), rgba(133, 74, 34, .25));
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .game-shell.shake-small { animation: shakeSmall .18s ease-out; }
+  .game-shell.shake-big { animation: shakeBig .32s ease-out; }
+
+  @keyframes shakeSmall {
+    0% { transform: translateX(0); }
+    30% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); }
+    100% { transform: translateX(0); }
+  }
+  @keyframes shakeBig {
+    0% { transform: translateX(0); }
+    20% { transform: translate(-8px, 2px); }
+    45% { transform: translate(7px, -2px); }
+    70% { transform: translate(-4px, 1px); }
+    100% { transform: translateX(0); }
+  }
+
+  header {
+    height: 112px;
+    padding: 18px 26px 12px;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr;
+    gap: 14px;
+    align-items: stretch;
+    position: relative;
+    z-index: 5;
+  }
+
+  .title-card,
+  .stat-card {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,246,224,.92));
+    border: 1px solid rgba(178, 92, 43, .22);
+    border-radius: 8px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 10px 24px rgba(129, 72, 29, .16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .title-card {
+    flex-direction: column;
+    gap: 0;
+    letter-spacing: 0;
+    padding: 6px 10px 7px;
+  }
+  .title-main {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 27px;
+    line-height: 1.22;
+    font-weight: 900;
+    color: #9b241b;
+    text-shadow: 0 2px 0 rgba(255,255,255,.86), 0 10px 24px rgba(155,36,27,.13);
+    white-space: nowrap;
+    overflow: visible;
+    max-width: 100%;
+    padding-top: 2px;
+  }
+
+  .stat-card {
+    flex-direction: column;
+    gap: 6px;
+    padding: 7px 10px;
+  }
+  .stat-label {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  .stat-value {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    color: #9b241b;
+    font-size: 34px;
+    line-height: 1;
+    font-weight: 900;
+  }
+  .stat-value.small { font-size: 30px; }
+
+  .stage {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 112px;
+    bottom: 0;
+    overflow: hidden;
+    z-index: 1;
+    background:
+      repeating-linear-gradient(0deg, rgba(118, 76, 38, .045) 0 1px, transparent 1px 22px),
+      linear-gradient(180deg, #fff7df 0%, #ffe9bf 54%, #c17a42 100%);
+  }
+
+  .decor-wave {
+    position: absolute;
+    inset: 0;
+    opacity: .15;
+    background-image:
+      radial-gradient(circle at 30px 36px, transparent 0 24px, rgba(174, 74, 54, .20) 25px 27px, transparent 28px),
+      radial-gradient(circle at 90px 36px, transparent 0 24px, rgba(174, 74, 54, .14) 25px 27px, transparent 28px),
+      radial-gradient(circle at 60px 86px, transparent 0 24px, rgba(174, 74, 54, .12) 25px 27px, transparent 28px);
+    background-size: 120px 96px;
+    animation: drift 18s linear infinite;
+  }
+  @keyframes drift { to { background-position: 120px 120px, -120px -120px; } }
+
+  .sushi-shop-decor {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .sushi-shop-decor::before {
+    content: none;
+    display: none;
+  }
+  .sushi-shop-decor::after {
+    content: none;
+    display: none;
+  }
+  .noren {
+    position: absolute;
+    top: 0;
+    left: 12px;
+    width: 330px;
+    height: 102px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    filter: drop-shadow(0 8px 10px rgba(97,43,21,.13));
+    opacity: .88;
+    z-index: 2;
+  }
+  .noren span {
+    position: relative;
+    margin-right: 6px;
+    border-radius: 0 0 14px 14px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.20), transparent 44%),
+      linear-gradient(180deg, #b72e27, #8f211b);
+    box-shadow: inset 0 -4px 0 rgba(72,19,14,.18);
+  }
+  .noren span::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 19px;
+    width: 34px;
+    height: 34px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: rgba(255,248,224,.75);
+    box-shadow: 0 0 0 5px rgba(255,248,224,.16);
+  }
+  .wall-menu {
+    position: absolute;
+    top: 15px;
+    right: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, 94px);
+    gap: 7px;
+    transform: rotate(1.2deg);
+    opacity: .86;
+    filter: drop-shadow(0 8px 10px rgba(91,45,20,.10));
+    z-index: 2;
+  }
+  .menu-strip {
+    height: 44px;
+    border-radius: 4px;
+    border: 1px solid rgba(132,58,32,.30);
+    background:
+      linear-gradient(90deg, #b62c25 0 6px, transparent 7px 100%),
+      linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,244,202,.88)),
+      linear-gradient(90deg, #fff8dd, #f0c96e);
+    box-shadow: 0 8px 15px rgba(94,50,20,.12), inset 0 1px 0 rgba(255,255,255,.78);
+    position: relative;
+    padding: 7px 9px 6px;
+    color: #74431f;
+    font-family: 'Meiryo', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 900;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .menu-strip::before {
+    content: attr(data-neta);
+    display: block;
+    width: auto;
+    height: auto;
+    margin: 0 0 7px;
+    border-radius: 0;
+    background: transparent;
+    color: #8f231c;
+  }
+  .menu-strip::after {
+    content: attr(data-price);
+    display: block;
+    width: auto;
+    height: auto;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #1f6d5f;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    text-align: right;
+  }
+  .counter-decor {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 16px;
+    height: 78px;
+    border-radius: 18px 18px 0 0;
+    background:
+      repeating-linear-gradient(90deg, rgba(118,66,32,.11) 0 2px, transparent 2px 48px),
+      linear-gradient(180deg, rgba(196,119,61,.12), rgba(108,58,27,.20));
+    opacity: .36;
+  }
+  .counter-decor::before {
+    content: none;
+    display: none;
+  }
+  .soy-saucer {
+    position: absolute;
+    right: 262px;
+    bottom: 84px;
+    width: 96px;
+    height: 34px;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 50% 45%, rgba(56,26,14,.70) 0 38%, transparent 39%),
+      radial-gradient(ellipse at 50% 48%, #f9fbf4 0 65%, #cbd6d2 66% 73%, transparent 74%);
+    box-shadow: 0 12px 18px rgba(83,45,20,.15), 0 23px 16px -12px rgba(82,43,18,.22);
+    opacity: .86;
+    z-index: 2;
+  }
+  .soy-saucer::before {
+    content: '';
+    position: absolute;
+    left: 26px;
+    top: -7px;
+    width: 19px;
+    height: 14px;
+    border-radius: 48% 52% 54% 46%;
+    background:
+      radial-gradient(circle at 34% 26%, rgba(255,255,255,.42), transparent 24%),
+      linear-gradient(145deg, #bce072, #6ea934);
+    box-shadow: 0 4px 5px rgba(70,45,20,.12);
+    transform: rotate(-8deg);
+  }
+  .soy-saucer::after {
+    content: '';
+    position: absolute;
+    right: 19px;
+    top: -9px;
+    width: 28px;
+    height: 17px;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 26% 42%, #ffd5c5 0 28%, transparent 29%),
+      radial-gradient(ellipse at 50% 36%, #ffc0ae 0 35%, transparent 36%),
+      radial-gradient(ellipse at 70% 50%, #f6a193 0 33%, transparent 34%);
+    box-shadow: 0 4px 6px rgba(70,45,20,.11);
+    transform: rotate(9deg);
+  }
+  .teacup {
+    position: absolute;
+    right: 24px;
+    bottom: 54px;
+    width: 82px;
+    height: 88px;
+    border-radius: 15px 15px 21px 21px / 10px 10px 18px 18px;
+    background:
+      radial-gradient(ellipse at 68% 22%, rgba(255,255,255,.28), transparent 22%),
+      radial-gradient(ellipse at 22% 62%, rgba(255,255,255,.18), transparent 28%),
+      repeating-linear-gradient(0deg, transparent 0 14px, rgba(28,57,68,.14) 14px 16px),
+      linear-gradient(90deg, rgba(255,255,255,.22), transparent 26%, transparent 72%, rgba(0,0,0,.18)),
+      linear-gradient(180deg, #7ea8b2 0%, #4e8494 46%, #315f72 100%);
+    box-shadow:
+      0 14px 22px rgba(61,36,16,.18),
+      0 27px 18px -13px rgba(82,43,18,.28),
+      inset 0 4px 0 rgba(255,255,255,.20),
+      inset 0 -8px 0 rgba(31,67,78,.20);
+    opacity: .92;
+    z-index: 2;
+  }
+  .teacup::before {
+    content: '';
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 24px;
+    bottom: 14px;
+    border-radius: 16px;
+    background:
+      linear-gradient(90deg, rgba(244,250,238,.70) 0 6px, transparent 7px 100%),
+      linear-gradient(90deg, transparent 0 70%, rgba(244,250,238,.28) 71% 79%, transparent 80% 100%);
+    opacity: .88;
+  }
+  .teacup::after {
+    content: '';
+    position: absolute;
+    left: 11px;
+    right: 11px;
+    top: -2px;
+    height: 21px;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 50% 50%, #78984c 0 56%, #dce9e4 57% 61%, #5b8998 62% 68%, #2d6377 69% 75%, transparent 76%);
+    box-shadow:
+      inset 0 3px 0 rgba(255,255,255,.26),
+      0 3px 3px rgba(35,54,58,.20),
+      0 78px 0 -18px #c7a86f;
+  }
+  .chopsticks {
+    position: absolute;
+    right: 120px;
+    bottom: 84px;
+    width: 128px;
+    height: 10px;
+    transform: rotate(-14deg);
+    opacity: .78;
+    z-index: 2;
+  }
+  .chopsticks::before,
+  .chopsticks::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 128px;
+    height: 4px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #7e4b28, #d6a45f 72%, #8d542d);
+    box-shadow: 0 3px 4px rgba(69,35,16,.12), 0 13px 12px -9px rgba(82,43,18,.28);
+  }
+  .chopsticks::after { top: 7px; transform: translateX(7px); }
+  .steam {
+    position: absolute;
+    right: 15px;
+    bottom: 124px;
+    width: 82px;
+    height: 58px;
+    opacity: .34;
+    background:
+      radial-gradient(ellipse at 24% 70%, transparent 0 36%, rgba(255,255,255,.78) 37% 41%, transparent 42%),
+      radial-gradient(ellipse at 52% 55%, transparent 0 36%, rgba(255,255,255,.72) 37% 41%, transparent 42%),
+      radial-gradient(ellipse at 77% 72%, transparent 0 36%, rgba(255,255,255,.66) 37% 41%, transparent 42%);
+    animation: steamRise 3.8s ease-in-out infinite;
+  }
+  @keyframes steamRise {
+    0%, 100% { transform: translateY(5px); opacity: .20; }
+    50% { transform: translateY(-4px); opacity: .38; }
+  }
+
+  .word-panel {
+    position: absolute;
+    left: 50%;
+    top: 22px;
+    transform: translateX(-50%);
+    width: 760px;
+    min-height: 178px;
+    border-radius: 12px;
+    padding: 22px 28px 20px;
+    background:
+      linear-gradient(180deg, rgba(255,253,245,.98), rgba(255,246,224,.96)),
+      repeating-linear-gradient(0deg, rgba(151,92,38,.035) 0 1px, transparent 1px 14px);
+    border: 2px solid rgba(172, 69, 41, .28);
+    box-shadow: 0 20px 42px rgba(94, 50, 20, .18), inset 0 1px 0 rgba(255,255,255,.90);
+    z-index: 4;
+  }
+  .jp-word {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 44px;
+    line-height: 1.12;
+    font-weight: 900;
+    letter-spacing: 0;
+    color: #2f2418;
+    text-shadow: 0 2px 0 rgba(255,255,255,.80);
+    padding: 0 4px;
+    overflow-wrap: anywhere;
+  }
+  .kana-word {
+    min-height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-top: 7px;
+    color: #8a6a4d;
+    font-size: 19px;
+    line-height: 1.15;
+    letter-spacing: 0;
+    padding: 0 4px;
+    overflow-wrap: anywhere;
+  }
+  .roman-display {
+    min-height: 66px;
+    margin-top: 13px;
+    display: grid;
+    align-items: center;
+    justify-content: center;
+    grid-template-columns: repeat(var(--roman-cols, 28), .62em);
+    column-gap: 0;
+    row-gap: 3px;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 44px;
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: 0;
+    white-space: normal;
+    overflow: visible;
+    text-rendering: geometricPrecision;
+  }
+  .roman-display.long {
+    align-content: center;
+    max-height: 76px;
+  }
+  .roman-display .char {
+    display: inline-flex;
+    width: .62em;
+    height: 1.08em;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+  }
+  .roman-display .typed {
+    color: var(--good);
+    font-weight: 900;
+    text-shadow: 0 1px 0 rgba(255,255,255,.75), 0 0 10px rgba(19,138,99,.12);
+  }
+  .roman-display .next {
+    color: var(--accent);
+    font-weight: 900;
+    border-bottom: .12em solid var(--accent);
+    padding-bottom: 3px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.86);
+  }
+  .roman-display .rest {
+    color: rgba(70,49,32,.42);
+    font-weight: 900;
+  }
+  .input-row {
+    margin: 16px auto 0;
+    width: 86%;
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(89, 58, 34, .14);
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(56, 35, 18, .16);
+  }
+  .input-progress {
+    width: 0%;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #0d8a67, #e7b42f, #c7352a);
+    box-shadow: 0 0 16px rgba(13,138,103,.18);
+  }
+
+  .lane-wrap {
+    position: absolute;
+    left: 58px;
+    right: 58px;
+    bottom: 118px;
+    height: 196px;
+    z-index: 3;
+    perspective: 880px;
+  }
+  .lane-wrap::before {
+    content: '';
+    position: absolute;
+    left: 98px;
+    right: 10px;
+    top: 139px;
+    height: 38px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(44, 29, 18, .34), rgba(44,29,18,.15) 46%, transparent 72%);
+    filter: blur(3px);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .lane-wrap::after {
+    content: '';
+    position: absolute;
+    left: 108px;
+    right: 0;
+    top: 50px;
+    height: 118px;
+    border-radius: 6px 26px 24px 6px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.98) 0 9px, rgba(190,199,197,.88) 10px 18px, transparent 19px 86px, rgba(55,64,62,.34) 87px 101px, rgba(255,255,255,.58) 102px 100%),
+      linear-gradient(180deg, rgba(255,255,255,.60), rgba(82,93,92,.18));
+    border: 1px solid rgba(91, 95, 90, .22);
+    box-shadow:
+      inset 0 10px 0 rgba(255,255,255,.46),
+      inset 0 -12px 0 rgba(73, 82, 79, .20),
+      0 22px 34px rgba(111, 58, 22, .18);
+    transform: rotateX(58deg) skewX(-3deg);
+    transform-origin: center bottom;
+    clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .drop-gap {
+    position: absolute;
+    left: 61px;
+    top: 132px;
+    width: 118px;
+    height: 50px;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 50% 45%, rgba(40,25,16,.26), rgba(40,25,16,.12) 48%, transparent 74%);
+    filter: blur(2px);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .lane-terminal {
+    display: none;
+  }
+  .lane-terminal::before {
+    content: none;
+    display: none;
+  }
+  .lane-terminal::after {
+    content: none;
+    display: none;
+  }
+  .belt {
+    position: absolute;
+    left: 112px;
+    right: 2px;
+    top: 60px;
+    height: 108px;
+    border-radius: 4px 28px 26px 4px;
+    overflow: hidden;
+    border: 1px solid rgba(86, 95, 95, .28);
+    background:
+      linear-gradient(180deg, #fbfdf9 0 7px, #cfd9d4 8px 15px, #717e7b 16px 22px, #2b3434 23px 73px, #101516 74px 82px, #899692 83px 90px, #e9f0ec 91px 100%),
+      linear-gradient(90deg, #e6ebe7, #a2afab);
+    box-shadow:
+      inset 0 8px 12px rgba(255,255,255,.42),
+      inset 0 -12px 14px rgba(25, 30, 30, .30),
+      0 19px 28px rgba(106, 55, 22, .18);
+    z-index: 2;
+    transform: rotateX(58deg) skewX(-3deg);
+    transform-origin: center bottom;
+    clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%);
+  }
+  .belt::before {
+    content: '';
+    position: absolute;
+    left: -70px;
+    right: -70px;
+    top: 25px;
+    height: 52px;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 2px, transparent 2px 36px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 18px),
+      linear-gradient(180deg, rgba(112,124,120,.58), rgba(23,28,28,.94));
+    animation: beltMove 1.55s linear infinite;
+  }
+  .belt::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 18px;
+    top: 12px;
+    height: 7px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255,255,255,.76), rgba(157,169,166,.46), rgba(255,255,255,.66));
+    box-shadow: 0 73px 0 rgba(245,250,246,.46), 0 65px 0 rgba(47,55,53,.34), 0 1px 0 rgba(255,255,255,.40);
+  }
+  .front-rail {
+    position: absolute;
+    left: 108px;
+    right: 0;
+    top: 142px;
+    height: 34px;
+    border-radius: 0 0 26px 8px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.70) 0 8px, rgba(190,202,198,.72) 9px 15px, rgba(92,104,101,.50) 16px 23px, rgba(255,255,255,.46) 24px 100%);
+    border-bottom: 1px solid rgba(70,78,75,.26);
+    box-shadow: 0 14px 20px rgba(84,43,18,.16), inset 0 2px 0 rgba(255,255,255,.46);
+    z-index: 4;
+    transform: rotateX(50deg) skewX(-3deg);
+    transform-origin: center bottom;
+    clip-path: polygon(2% 0, 98% 0, 100% 100%, 0 100%);
+    pointer-events: none;
+  }
+  .plate::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 13px;
+    height: 20px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(22,28,27,.24), rgba(22,28,27,.10) 48%, transparent 72%);
+    filter: blur(2.5px);
+    transform: rotateX(58deg) scaleX(1.08);
+    z-index: 0;
+  }
+  @keyframes beltMove {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-54px); }
+  }
+  .target-gate {
+    display: none;
+  }
+  .game-shell.word-danger .belt::before { animation-duration: .92s; }
+  .game-shell.word-danger .lane-terminal {
+    display: none;
+  }
+  .game-shell.time-low #timeValue {
+    color: #d33a42;
+    text-shadow: 0 0 14px rgba(211, 58, 66, .28);
+  }
+  .plate {
+    position: absolute;
+    top: 18px;
+    left: 0;
+    width: 146px;
+    height: 146px;
+    transform: translateX(860px);
+    transition: filter .12s ease;
+    z-index: 5;
+  }
+  .plate.clear { animation: popClear .26s ease-out forwards; }
+  .plate.miss {
+    animation: missFall .68s cubic-bezier(.2,.55,.25,1) forwards;
+    transform-origin: 48% 74%;
+  }
+  @keyframes popClear {
+    0% { transform: translate(var(--px), 0) scale(1); opacity: 1; filter: brightness(1); }
+    35% { transform: translate(var(--px), -18px) scale(1.18); opacity: 1; filter: brightness(1.5); }
+    100% { transform: translate(var(--px), -58px) scale(.76); opacity: 0; filter: brightness(2); }
+  }
+  @keyframes missFall {
+    0% { transform: translate(var(--px), 0) rotate(0deg) scale(1); opacity: 1; filter: brightness(1); }
+    14% { transform: translate(calc(var(--px) - 5px), 7px) rotate(-4deg) scale(1); opacity: 1; filter: brightness(.98); }
+    36% { transform: translate(calc(var(--px) - 18px), 54px) rotate(-16deg) scale(.99); opacity: 1; filter: brightness(.96); }
+    68% { transform: translate(calc(var(--px) - 42px), 156px) rotate(-38deg) scale(.95); opacity: .86; filter: brightness(.90); }
+    100% { transform: translate(calc(var(--px) - 66px), 270px) rotate(-62deg) scale(.88); opacity: 0; filter: brightness(.82); }
+  }
+  .plate-base {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 10px;
+    height: 60px;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 50% 43%, rgba(255,255,255,.96) 0 38%, transparent 39%),
+      radial-gradient(ellipse at 50% 45%, #fffdf7 0 42%, #e9f4ff 43% 50%, #287fbf 51% 56%, #fffdf7 57% 68%, #d2c0a8 69% 100%);
+    box-shadow:
+      0 18px 18px rgba(72, 37, 16, .26),
+      inset 0 5px 7px rgba(255,255,255,.66),
+      inset 0 -7px 0 rgba(82, 65, 43, .12);
+    z-index: 1;
+  }
+  .plate-base::after {
+    content: '';
+    position: absolute;
+    left: 22px;
+    right: 22px;
+    top: 14px;
+    height: 13px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.38);
+    filter: blur(.2px);
+  }
+  .sushi {
+    position: absolute;
+    left: 24px;
+    top: 33px;
+    width: 98px;
+    height: 68px;
+    border-radius: 24px 24px 30px 30px / 20px 20px 38px 38px;
+    background:
+      radial-gradient(circle at 15px 44px, rgba(255,255,255,.98) 0 2px, transparent 3px),
+      radial-gradient(circle at 27px 58px, rgba(255,255,255,.95) 0 2px, transparent 3px),
+      radial-gradient(circle at 45px 49px, rgba(255,255,255,.98) 0 2px, transparent 3px),
+      radial-gradient(circle at 63px 59px, rgba(255,255,255,.92) 0 2px, transparent 3px),
+      radial-gradient(circle at 78px 45px, rgba(255,255,255,.96) 0 2px, transparent 3px),
+      linear-gradient(180deg, #fffdf8 0%, #f7efdf 66%, #d9cdb6 100%);
+    box-shadow:
+      0 4px 2px rgba(58, 32, 16, .20),
+      0 12px 20px rgba(72, 37, 16, .26),
+      inset 0 -7px 0 rgba(121, 81, 40, .08),
+      inset 0 2px 0 rgba(255,255,255,.86);
+    transform: rotate(-2deg);
+    z-index: 3;
+  }
+  .sushi::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    right: -10px;
+    top: -16px;
+    height: 52px;
+    border-radius: 58% 42% 52% 44% / 50% 48% 48% 50%;
+    background:
+      linear-gradient(105deg, transparent 0 8%, rgba(255,255,255,.26) 9% 15%, transparent 16% 28%, rgba(255,255,255,.20) 29% 35%, transparent 36% 50%, rgba(255,255,255,.18) 51% 58%, transparent 59% 100%),
+      radial-gradient(ellipse at 30% 22%, rgba(255,255,255,.58), transparent 28%),
+      radial-gradient(ellipse at 78% 75%, rgba(80,20,20,.18), transparent 36%),
+      linear-gradient(135deg, var(--fish1), var(--fish2) 62%, rgba(74,23,18,.26));
+    box-shadow:
+      0 8px 14px rgba(64,32,16,.30),
+      0 2px 0 rgba(255,255,255,.14),
+      inset 0 4px 0 rgba(255,255,255,.22),
+      inset 0 -7px 0 rgba(90, 24, 18, .10);
+    z-index: 2;
+  }
+  .sushi::after {
+    content: none;
+    display: none;
+  }
+  .plate.sushi-ebi .sushi::before {
+    left: -22px;
+    right: -24px;
+    top: -18px;
+    height: 40px;
+    border-radius: 92% 28% 74% 28% / 44% 42% 52% 48%;
+    background:
+      radial-gradient(ellipse at 15% 45%, rgba(255,255,255,.90) 0 8%, transparent 9%),
+      linear-gradient(90deg, transparent 0 48%, rgba(255,246,230,.72) 49% 51%, rgba(196,76,52,.28) 52% 53%, transparent 54% 100%),
+      repeating-linear-gradient(104deg, rgba(169,57,42,.32) 0 2px, rgba(255,226,205,.22) 2px 6px, transparent 6px 15px),
+      radial-gradient(ellipse at 36% 17%, rgba(255,238,218,.58), transparent 39%),
+      radial-gradient(ellipse at 70% 72%, rgba(191,60,39,.24), transparent 36%),
+      linear-gradient(135deg, #fff0d9 0%, #ffc293 23%, #ff8b58 57%, #dc5338 100%);
+    transform: rotate(-4deg);
+  }
+  .plate.sushi-ebi .sushi::after {
+    content: '';
+    display: block;
+    position: absolute;
+    right: -44px;
+    top: -15px;
+    width: 64px;
+    height: 44px;
+    border-radius: 50%;
+    background:
+      linear-gradient(18deg, transparent 0 44%, rgba(155,48,36,.66) 45% 50%, transparent 51% 100%),
+      radial-gradient(ellipse at 23% 36%, #ffbd86 0 31%, transparent 32%),
+      radial-gradient(ellipse at 72% 29%, #e75a37 0 30%, transparent 31%),
+      radial-gradient(ellipse at 73% 74%, #cf422f 0 33%, transparent 34%);
+    transform: rotate(8deg);
+    clip-path: polygon(0 42%, 28% 8%, 78% 1%, 62% 42%, 88% 16%, 100% 52%, 88% 86%, 62% 58%, 78% 98%, 28% 90%, 0 59%);
+    box-shadow: -8px 12px 0 -8px #bd3d2d;
+  }
+  .plate.sushi-gunkan .sushi {
+    left: 25px;
+    top: 29px;
+    width: 96px;
+    height: 78px;
+    border-radius: 20px 20px 26px 26px / 18px 18px 28px 28px;
+    background:
+      linear-gradient(90deg, #151916 0 11px, #242c27 12px 78px, #111513 79px 100%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 18px),
+      linear-gradient(180deg, #202821, #0e1110);
+    box-shadow: 0 9px 18px rgba(31,20,12,.32), inset 0 -10px 0 rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06);
+  }
+  .plate.sushi-gunkan .sushi::before {
+    left: 9px;
+    right: 9px;
+    top: -13px;
+    height: 38px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 18% 42%, rgba(255,244,177,.92) 0 6px, transparent 7px),
+      radial-gradient(circle at 38% 28%, rgba(255,196,73,.96) 0 7px, transparent 8px),
+      radial-gradient(circle at 60% 44%, rgba(255,138,62,.92) 0 7px, transparent 8px),
+      radial-gradient(circle at 80% 30%, rgba(255,221,87,.96) 0 6px, transparent 7px),
+      linear-gradient(180deg, var(--fish1), var(--fish2));
+    box-shadow: 0 5px 8px rgba(36,21,12,.24);
+  }
+  .plate.sushi-gunkan .sushi::after {
+    content: '';
+    display: block;
+    position: absolute;
+    left: 9px;
+    right: 9px;
+    top: 14px;
+    bottom: 9px;
+    border-radius: 0 0 16px 16px;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.08), transparent 16%, transparent 84%, rgba(0,0,0,.20)),
+      linear-gradient(180deg, #202721, #111614);
+    box-shadow: inset 0 8px 0 rgba(255,255,255,.035), inset 0 -8px 0 rgba(0,0,0,.22);
+  }
+  .plate.sushi-tamago .sushi::before {
+    left: -8px;
+    right: -8px;
+    top: -15px;
+    height: 48px;
+    border-radius: 16px 16px 22px 22px / 12px 12px 28px 28px;
+    background:
+      linear-gradient(180deg, #fff6aa, #f4c94e 68%, #d79b2b);
+    box-shadow: 0 8px 12px rgba(85,48,14,.24), inset 0 3px 0 rgba(255,255,255,.34);
+  }
+  .plate.sushi-tamago .sushi::after {
+    content: '';
+    display: block;
+    position: absolute;
+    left: 36px;
+    right: 36px;
+    top: -22px;
+    height: 94px;
+    border-radius: 5px 5px 12px 12px;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.10), transparent 22%, transparent 70%, rgba(0,0,0,.26)),
+      linear-gradient(180deg, #222820 0%, #151a15 58%, #0d110e 100%);
+    opacity: .96;
+    z-index: 4;
+    box-shadow: 0 5px 7px rgba(34,21,12,.20), inset 0 2px 0 rgba(255,255,255,.06);
+  }
+  .plate.sushi-hotate .sushi::before {
+    left: -5px;
+    right: -5px;
+    top: -17px;
+    height: 54px;
+    border-radius: 50% 50% 42% 42% / 62% 62% 38% 38%;
+    background:
+      repeating-linear-gradient(95deg, rgba(255,255,255,.48) 0 6px, transparent 6px 16px),
+      radial-gradient(ellipse at 35% 20%, rgba(255,255,255,.86), transparent 38%),
+      linear-gradient(180deg, #fff8e7, #e6c48b 78%, #c99558);
+  }
+  .plate.sushi-ika .sushi::before {
+    left: -9px;
+    right: -9px;
+    top: -15px;
+    height: 50px;
+    border-radius: 20px 20px 28px 28px;
+    background:
+      repeating-linear-gradient(90deg, rgba(210,218,224,.52) 0 2px, transparent 2px 13px),
+      linear-gradient(180deg, #ffffff, #eef4f6 72%, #d0d8db);
+  }
+  .plate-name {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: 0;
+    height: 23px;
+    border-radius: 999px;
+    background: rgba(255,250,238,.92);
+    border: 1px solid rgba(159, 81, 42, .22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #694326;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 4;
+  }
+
+  .combo-bubble {
+    position: absolute;
+    left: 40px;
+    top: 98px;
+    transform: translateY(2px) scale(.98);
+    min-width: 170px;
+    max-width: 330px;
+    padding: 7px 15px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(255,250,232,.97), rgba(255,235,188,.94));
+    border: 2px solid rgba(185, 99, 35, .22);
+    box-shadow: 0 10px 20px rgba(124, 65, 22, .15), inset 0 1px 0 rgba(255,255,255,.82);
+    color: #4b2c10;
+    font-weight: 900;
+    font-size: 15px;
+    line-height: 1.15;
+    text-align: center;
+    z-index: 18;
+    pointer-events: none;
+    opacity: 0;
+    white-space: nowrap;
+  }
+  .combo-bubble.show { animation: bubbleShow 2.0s ease-out forwards; }
+  .combo-bubble.bubble-training {
+    background: linear-gradient(180deg, #fffdf7, #efe8dc);
+    border-color: #a98f75;
+    color: #6b5643;
+  }
+  .combo-bubble.bubble-kappa {
+    background: linear-gradient(180deg, #f2fff0, #c9f0c4);
+    border-color: #54a85d;
+    color: #286431;
+  }
+  .combo-bubble.bubble-tamago {
+    background: linear-gradient(180deg, #fff9d6, #ffd76b);
+    border-color: #d6a62e;
+    color: #73510a;
+  }
+  .combo-bubble.bubble-ebi {
+    background: linear-gradient(180deg, #fff2ed, #ffb39a);
+    border-color: #e97658;
+    color: #8f341d;
+  }
+  .combo-bubble.bubble-akami {
+    background: linear-gradient(180deg, #fff0ec, #ff7d73);
+    border-color: #d9472f;
+    color: #7f1c16;
+  }
+  .combo-bubble.bubble-chutoro {
+    background: linear-gradient(180deg, #fff7fa, #ffc5d2 54%, #f49ab2);
+    border-color: #d95f86;
+    color: #7b2143;
+    box-shadow: 0 10px 22px rgba(160, 66, 94, .20), 0 0 14px rgba(255, 184, 209, .34), inset 0 1px 0 rgba(255,255,255,.84);
+  }
+  .combo-bubble.bubble-otoro {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,244,191,.92) 38%, rgba(218,174,65,.96)),
+      radial-gradient(circle at 18% 18%, rgba(255,255,255,.95), transparent 22%);
+    border-color: #c59b26;
+    color: #4e2d05;
+    box-shadow: 0 10px 24px rgba(116, 78, 16, .24), 0 0 18px rgba(255,213,84,.52), inset 0 1px 0 rgba(255,255,255,.92);
+  }
+  .combo-bubble.bubble-combo {
+    background: linear-gradient(180deg, #fff8d4, #ffc857 60%, #e69f1d);
+    border-color: #b8790c;
+    color: #5e3500;
+    box-shadow: 0 10px 24px rgba(126, 77, 10, .24), 0 0 16px rgba(255,190,69,.48), inset 0 1px 0 rgba(255,255,255,.90);
+  }
+  .combo-bubble.bubble-miss {
+    background: linear-gradient(180deg, #fff1ef, #ffc7c1);
+    border-color: #d64045;
+    color: #8a1d22;
+  }
+  @keyframes bubbleShow {
+    0% { opacity: 0; transform: translateY(6px) scale(.94); }
+    16% { opacity: .96; transform: translateY(0) scale(1.02); }
+    26% { transform: translateY(0) scale(1); }
+    78% { opacity: .92; }
+    100% { opacity: 0; transform: translateY(-5px) scale(.98); }
+  }
+
+  .hit-flash {
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(255,255,255,.72), rgba(255,190,69,.32) 28%, transparent 68%);
+    transform: translate(-50%, -50%) scale(.2);
+    opacity: 0;
+    z-index: 6;
+  }
+  .hit-flash.show { animation: flash .38s ease-out forwards; }
+  @keyframes flash {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
+    30% { opacity: .9; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.45); }
+  }
+
+  .side-info {
+    position: absolute;
+    left: 22px;
+    right: 22px;
+    bottom: 22px;
+    height: 54px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    z-index: 5;
+  }
+  .info-pill {
+    flex: 1;
+    border-radius: 8px;
+    background: rgba(255,250,238,.82);
+    border: 1px solid rgba(159, 81, 42, .18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #8a6a4d;
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .info-pill.wide {
+    flex: 1.22;
+  }
+  .info-pill strong {
+    color: #9b241b;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 19px;
+    min-width: 2.2em;
+    text-align: center;
+  }
+  .small-reset {
+    flex: 0 0 118px;
+    height: 54px;
+    padding: 0 14px;
+    font-size: 14px;
+    box-shadow: 0 10px 18px rgba(147, 52, 28, .20), inset 0 1px 0 rgba(255,255,255,.34);
+  }
+  .audio-toggle-row {
+    flex: 0 0 206px;
+    height: 54px;
+    display: flex;
+    gap: 8px;
+  }
+  .audio-toggle-row .small-reset {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 12px;
+  }
+
+
+  .countdown-card {
+    width: 360px;
+    height: 270px;
+    border-radius: 12px;
+    background:
+      radial-gradient(circle at 50% 18%, rgba(255,255,255,.94), transparent 42%),
+      linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,239,204,.97));
+    border: 2px solid rgba(176, 72, 43, .25);
+    box-shadow: 0 26px 70px rgba(117, 63, 26, .24), inset 0 1px 0 rgba(255,255,255,.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .countdown-label {
+    color: #76543b;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+  .countdown-number {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 96px;
+    line-height: 1;
+    font-weight: 900;
+    color: #b72e22;
+    text-shadow: 0 4px 0 rgba(255,255,255,.86), 0 18px 36px rgba(183,46,34,.22);
+    animation: countdownPop .52s ease-out;
+  }
+  @keyframes countdownPop {
+    0% { transform: scale(.55); opacity: .35; }
+    45% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 36px;
+    background: rgba(255, 245, 220, .56);
+    backdrop-filter: blur(7px);
+  }
+  .overlay.hidden { display: none; }
+  .menu-card {
+    width: 720px;
+    max-height: 624px;
+    border-radius: 12px;
+    padding: 34px 38px 32px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,247,228,.96)),
+      repeating-linear-gradient(0deg, rgba(151,92,38,.035) 0 1px, transparent 1px 13px);
+    border: 2px solid rgba(176, 72, 43, .25);
+    box-shadow: 0 26px 70px rgba(117, 63, 26, .26), inset 0 1px 0 rgba(255,255,255,.82);
+    text-align: center;
+  }
+  .menu-title {
+    font-size: 44px;
+    line-height: 1.1;
+    font-weight: 900;
+    letter-spacing: 0;
+    margin-bottom: 10px;
+    color: #9b241b;
+    text-shadow: 0 3px 0 rgba(255,255,255,.82);
+  }
+  .menu-copy {
+    color: #76543b;
+    line-height: 1.7;
+    font-size: 16px;
+    margin: 0 auto 24px;
+  }
+  #resultMessage {
+    margin-top: 18px;
+    margin-bottom: 26px;
+  }
+  .button-row {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  button {
+    appearance: none;
+    border: 0;
+    border-radius: 8px;
+    padding: 15px 30px;
+    font-size: 16px;
+    font-weight: 900;
+    cursor: pointer;
+    color: #fff9ec;
+    background: linear-gradient(180deg, #e84f38, #b72e22);
+    box-shadow: 0 12px 22px rgba(147, 52, 28, .28), inset 0 1px 0 rgba(255,255,255,.34);
+    transition: transform .12s ease, filter .12s ease;
+    white-space: nowrap;
+  }
+  button:hover { transform: translateY(-2px); filter: brightness(1.04); }
+  button:active { transform: translateY(1px); }
+  button.secondary {
+    color: #7a3d24;
+    background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,239,208,.92));
+    border: 1px solid rgba(159, 81, 42, .24);
+  }
+  button.is-off {
+    color: #6b6258;
+    background: linear-gradient(180deg, rgba(247,247,243,.96), rgba(226,221,212,.92));
+    border-color: rgba(112, 105, 96, .24);
+    box-shadow: 0 8px 16px rgba(76, 64, 50, .14), inset 0 1px 0 rgba(255,255,255,.44);
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 13px;
+    margin: 22px 0 24px;
+  }
+  .result-box {
+    border-radius: 8px;
+    padding: 15px 6px 16px;
+    background: rgba(255,250,238,.76);
+    border: 1px solid rgba(159, 81, 42, .18);
+  }
+  .result-label { color: var(--muted); font-size: 14px; margin-bottom: 7px; letter-spacing: 0; }
+  .result-value {
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    font-size: 31px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 150px;
+    min-height: 96px;
+    padding: 8px 26px 10px;
+    border-radius: 12px;
+    border: 3px solid rgba(217,71,47,.30);
+    background: linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,238,204,.76));
+    font-size: 72px;
+    line-height: 1;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 0;
+    text-shadow: 0 0 28px rgba(217,71,47,.20), 0 4px 0 rgba(255,255,255,.86);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.86), 0 12px 26px rgba(128, 69, 23, .16);
+  }
+  .rank.rank-f, .rank.rank-e, .rank.rank-d {
+    color: #6f6258;
+    border-color: #b9a895;
+    background: linear-gradient(180deg, #fffdf7, #eee4d7);
+  }
+  .rank.rank-c, .rank.rank-cplus {
+    color: #2d7043;
+    border-color: #6fb777;
+    background: linear-gradient(180deg, #f7fff2, #d9f2d1);
+  }
+  .rank.rank-b, .rank.rank-bplus {
+    color: #7c5510;
+    border-color: #ddb14b;
+    background: linear-gradient(180deg, #fffbe4, #ffe39a);
+  }
+  .rank.rank-a, .rank.rank-aplus {
+    color: #8f341d;
+    border-color: #ec8b63;
+    background: linear-gradient(180deg, #fff4eb, #ffc3a7);
+  }
+  .rank.rank-s, .rank.rank-splus {
+    color: #7b2143;
+    border-color: #d95f86;
+    background: linear-gradient(180deg, #fff8fb, #ffd0dd 55%, #f5a7bd);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.90), 0 14px 30px rgba(152, 62, 95, .22), 0 0 20px rgba(255, 173, 207, .35);
+  }
+  .rank.rank-ss, .rank.rank-ssplus {
+    color: #4e2d05;
+    border-color: #c59b26;
+    background: linear-gradient(180deg, #ffffff, #fff1aa 50%, #ddb14b);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.94), 0 14px 30px rgba(140, 95, 20, .24), 0 0 24px rgba(255,210,77,.48);
+  }
+  .rank.rank-sss {
+    color: #2b124e;
+    border-color: #8f63d9;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.96), rgba(235,220,255,.96) 42%, rgba(188,153,255,.94)),
+      radial-gradient(circle at 20% 18%, rgba(255,255,255,.98), transparent 26%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.96), 0 16px 36px rgba(75, 39, 128, .28), 0 0 26px rgba(166, 125, 255, .56);
+  }
+  .history {
+    height: 50px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    color: #76543b;
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  .history span {
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(255,246,224,.88);
+  }
+
+  .hidden-start .word-panel,
+  .hidden-start .lane-wrap,
+  .hidden-start .side-info { opacity: .28; filter: blur(1px); }
+
+  @media (max-width: 700px) {
+    body { background: #fff3d3; }
+  }
+</style>
+</head>
+<body tabindex="0">
+<div id="app-root">
+  <div id="gameShell" class="game-shell hidden-start">
+    <header>
+      <div class="title-card">
+        <div class="title-main">寿司タイピング</div>
+      </div>
+      <div class="stat-card"><div class="stat-label">TIME</div><div id="timeValue" class="stat-value">60</div></div>
+      <div class="stat-card"><div class="stat-label">SCORE</div><div id="scoreValue" class="stat-value small">0</div></div>
+      <div class="stat-card"><div class="stat-label">COMBO</div><div id="comboValue" class="stat-value">0</div></div>
+      <div class="stat-card"><div class="stat-label">BEST</div><div id="bestValue" class="stat-value small">0</div></div>
+    </header>
+
+    <div id="comboBubble" class="combo-bubble"></div>
+
+    <main class="stage">
+      <div class="decor-wave"></div>
+      <div class="sushi-shop-decor" aria-hidden="true">
+        <div class="noren"><span></span><span></span><span></span><span></span></div>
+        <div class="wall-menu">
+          <div class="menu-strip" data-neta="まぐろ" data-price="180"></div><div class="menu-strip" data-neta="えび" data-price="180"></div><div class="menu-strip" data-neta="玉子" data-price="150"></div>
+          <div class="menu-strip" data-neta="いくら" data-price="360"></div><div class="menu-strip" data-neta="穴子" data-price="280"></div><div class="menu-strip" data-neta="茶碗蒸し" data-price="260"></div>
+        </div>
+        <div class="counter-decor"></div>
+        <div class="soy-saucer"></div>
+        <div class="chopsticks"></div>
+        <div class="steam"></div>
+        <div class="teacup"></div>
+      </div>
+
+      <section class="word-panel">
+        <div id="jpWord" class="jp-word">日本語</div>
+        <div id="kanaWord" class="kana-word">にほんご</div>
+        <div id="romanDisplay" class="roman-display"><span class="rest">nihongo</span></div>
+        <div class="input-row"><div id="inputProgress" class="input-progress"></div></div>
+      </section>
+
+      <div id="hitFlash" class="hit-flash"></div>
+
+      <section class="lane-wrap">
+        <div class="drop-gap"></div>
+        <div class="lane-terminal"></div>
+        <div class="belt"></div>
+        <div class="target-gate"></div>
+        <div id="plate" class="plate" style="--fish1:#ff8c8c; --fish2:#ff435e; --px: 860px;">
+          <div class="plate-base"></div>
+          <div class="sushi"></div>
+          <div id="plateName" class="plate-name">まぐろ</div>
+        </div>
+        <div class="front-rail"></div>
+      </section>
+
+      <section class="side-info">
+        <div class="info-pill">CLEAR <strong id="clearValue">0</strong></div>
+        <div class="info-pill">MISS <strong id="missValue">0</strong></div>
+      <div class="info-pill wide">ACCURACY <strong id="accValue">100.0%</strong></div>
+      <div class="info-pill wide">SPEED <strong id="speedValue">0.0</strong> key/min</div>
+      <button id="resetBtn" class="small-reset secondary">仕切り直し</button>
+        <div class="audio-toggle-row">
+          <button id="playBgmBtn" class="small-reset secondary">BGM ON</button>
+          <button id="playSfxBtn" class="small-reset secondary">効果音 ON</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="startOverlay" class="overlay">
+      <div class="menu-card">
+        <div class="menu-title">寿司タイピング</div>
+        <p class="menu-copy">読みを打ち切るたび、次のお皿へ。<br>60秒でどこまで握れるか一本勝負です。</p>
+        <div class="button-row">
+          <button id="startBtn">握る</button>
+          <button id="menuBgmBtn" class="secondary">BGM ON</button>
+          <button id="menuSfxBtn" class="secondary">効果音 ON</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultOverlay" class="overlay hidden">
+      <div class="menu-card">
+        <div class="menu-title">成績</div>
+        <div id="rankValue" class="rank">A</div>
+        <div id="resultMessage" class="menu-copy">お見事です。</div>
+        <div class="result-grid">
+          <div class="result-box"><div class="result-label">SCORE</div><div id="rScore" class="result-value">0</div></div>
+          <div class="result-box"><div class="result-label">CLEAR</div><div id="rClear" class="result-value">0</div></div>
+          <div class="result-box"><div class="result-label">ACCURACY</div><div id="rAcc" class="result-value">0.0%</div></div>
+          <div class="result-box"><div class="result-label">KEY/MIN</div><div id="rSpeed" class="result-value">0.0</div></div>
+          <div class="result-box"><div class="result-label">MAX COMBO</div><div id="rCombo" class="result-value">0</div></div>
+          <div class="result-box"><div class="result-label">MISS</div><div id="rMiss" class="result-value">0</div></div>
+          <div class="result-box"><div class="result-label">WRONG</div><div id="rWrong" class="result-value">0</div></div>
+          <div class="result-box"><div class="result-label">BEST</div><div id="rBest" class="result-value">0</div></div>
+        </div>
+        <div class="button-row">
+          <button id="restartBtn">もう一皿</button>
+          <button id="backBtn" class="secondary">タイトルへ</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="countdownOverlay" class="overlay hidden">
+      <div class="countdown-card">
+        <div class="countdown-label">まもなく開店</div>
+        <div id="countdownValue" class="countdown-number">3</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('error', function(e) {
+  console.error('Error:', e.message, e.filename, e.lineno);
+});
+
+function storageGet(key) {
+  let value = null;
+  try { value = localStorage.getItem(key); } catch(e) {}
+  if (value !== null && value !== '') return value;
+  try {
+    const prefix = encodeURIComponent(key) + '=';
+    const parts = document.cookie ? document.cookie.split(';') : [];
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i].trim();
+      if (part.indexOf(prefix) === 0) return decodeURIComponent(part.slice(prefix.length));
+    }
+  } catch(e) {}
+  return null;
+}
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch(e) {}
+  try {
+    const maxAge = 60 * 60 * 24 * 365 * 5;
+    document.cookie = encodeURIComponent(key) + '=' + encodeURIComponent(value) + '; max-age=' + maxAge + '; path=/; SameSite=Lax';
+  } catch(e) {}
+}
+
+let audioCtx = null;
+let bgmEnabled = true;
+let sfxEnabled = true;
+let bgmTimer = null;
+let bgmRunning = false;
+const SFX_VOLUME = 1.65;
+const BGM_VOLUME = 1.9;
+
+function getAC() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { return null; }
+  }
+  if (audioCtx.state === 'suspended') {
+    try { audioCtx.resume(); } catch(e) {}
+  }
+  return audioCtx;
+}
+
+function tone(freq, dur, type, gain, when, detune) {
+  const ac = getAC(); if (!ac) return;
+  const start = when || ac.currentTime;
+  const level = gain || 0.05;
+  const attack = Math.min(0.026, Math.max(0.012, dur * 0.24));
+  const releaseStart = Math.max(start + attack + 0.01, start + dur - 0.035);
+  const osc = ac.createOscillator();
+  const g = ac.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, start);
+  if (detune) osc.detune.setValueAtTime(detune, start);
+  g.gain.setValueAtTime(0.0001, start);
+  g.gain.linearRampToValueAtTime(level, start + attack);
+  g.gain.setValueAtTime(level, releaseStart);
+  g.gain.linearRampToValueAtTime(0.0001, start + dur);
+  osc.connect(g);
+  g.connect(ac.destination);
+  osc.start(start);
+  osc.stop(start + dur + 0.06);
+}
+
+function playKeySound() {
+  if (!sfxEnabled) return;
+  const ac = getAC(); if (!ac) return;
+  const t = ac.currentTime;
+  tone(980, 0.055, 'triangle', 0.020 * SFX_VOLUME, t);
+}
+function playWrongSound() {
+  if (!sfxEnabled) return;
+  const ac = getAC(); if (!ac) return;
+  const t = ac.currentTime;
+  tone(156, 0.13, 'triangle', 0.032 * SFX_VOLUME, t, -12);
+  tone(118, 0.15, 'sine', 0.015 * SFX_VOLUME, t + 0.045);
+}
+function playClearSound(combo) {
+  if (!sfxEnabled) return;
+  const ac = getAC(); if (!ac) return;
+  const t = ac.currentTime;
+  const lift = Math.min(combo, 18) * 7;
+  tone(659 + lift, 0.07, 'triangle', 0.028 * SFX_VOLUME, t);
+  tone(880 + lift, 0.09, 'triangle', 0.030 * SFX_VOLUME, t + 0.055);
+  tone(1174 + lift, 0.13, 'sine', 0.024 * SFX_VOLUME, t + 0.13);
+}
+function playMissSound() {
+  if (!sfxEnabled) return;
+  const ac = getAC(); if (!ac) return;
+  const t = ac.currentTime;
+  tone(260, 0.13, 'triangle', 0.034 * SFX_VOLUME, t);
+  tone(196, 0.18, 'triangle', 0.029 * SFX_VOLUME, t + 0.09);
+  tone(130, 0.22, 'triangle', 0.020 * SFX_VOLUME, t + 0.18);
+}
+
+function startBgm() {
+  if (!bgmEnabled || bgmRunning) return;
+  const ac = getAC(); if (!ac) return;
+  bgmRunning = true;
+  const melody = [659, 0, 587, 523, 587, 0, 440, 523, 659, 784, 659, 587, 523, 0, 440, 392];
+  const bass = [196, 196, 220, 196, 174, 174, 196, 220];
+  let step = 0;
+  bgmTimer = setInterval(function() {
+    if (!bgmEnabled || !bgmRunning) return;
+    const t = ac.currentTime + 0.035;
+    const note = melody[step % melody.length];
+    if (note) {
+      tone(note, 0.15, 'triangle', 0.009 * BGM_VOLUME, t);
+      if (step % 8 === 7) tone(note * 2, 0.08, 'sine', 0.004 * BGM_VOLUME, t + 0.07);
+    }
+    if (step % 4 === 0) tone(bass[(step / 4) % bass.length], 0.22, 'sine', 0.010 * BGM_VOLUME, t);
+    step += 1;
+  }, 185);
+}
+function stopBgm() {
+  bgmRunning = false;
+  if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
+}
+
+const COURSE = { time: 60, speed: 1.00, label: '標準' };
+let countdownTimer = null;
+
+const WORDS = [
+  {jp:'寿司', kana:'すし'},
+  {jp:'鮪', kana:'まぐろ'},
+  {jp:'中トロ', kana:'ちゅうとろ'},
+  {jp:'大トロ', kana:'おおとろ'},
+  {jp:'鮭', kana:'さけ'},
+  {jp:'サーモン', kana:'さーもん'},
+  {jp:'鯛', kana:'たい'},
+  {jp:'海老', kana:'えび'},
+  {jp:'甘海老', kana:'あまえび'},
+  {jp:'烏賊', kana:'いか'},
+  {jp:'蛸', kana:'たこ'},
+  {jp:'穴子', kana:'あなご'},
+  {jp:'玉子', kana:'たまご'},
+  {jp:'帆立', kana:'ほたて'},
+  {jp:'雲丹', kana:'うに'},
+  {jp:'いくら', kana:'いくら'},
+  {jp:'鯖', kana:'さば'},
+  {jp:'鰤', kana:'ぶり'},
+  {jp:'鰹', kana:'かつお'},
+  {jp:'秋刀魚', kana:'さんま'},
+  {jp:'鰯', kana:'いわし'},
+  {jp:'蟹', kana:'かに'},
+  {jp:'鰻', kana:'うなぎ'},
+  {jp:'河豚', kana:'ふぐ'},
+  {jp:'小肌', kana:'こはだ'},
+  {jp:'鰺', kana:'あじ'},
+  {jp:'赤貝', kana:'あかがい'},
+  {jp:'つぶ貝', kana:'つぶがい'},
+  {jp:'鉄火巻', kana:'てっかまき'},
+  {jp:'河童巻', kana:'かっぱまき'},
+  {jp:'納豆巻', kana:'なっとうまき'},
+  {jp:'醤油', kana:'しょうゆ'},
+  {jp:'山葵', kana:'わさび'},
+  {jp:'生姜', kana:'しょうが'},
+  {jp:'味噌汁', kana:'みそしる'},
+  {jp:'茶碗蒸し', kana:'ちゃわんむし'},
+  {jp:'天ぷら', kana:'てんぷら'},
+  {jp:'蕎麦', kana:'そば'},
+  {jp:'饂飩', kana:'うどん'},
+  {jp:'焼鳥', kana:'やきとり'},
+  {jp:'唐揚げ', kana:'からあげ'},
+  {jp:'牛丼', kana:'ぎゅうどん'},
+  {jp:'親子丼', kana:'おやこどん'},
+  {jp:'餃子', kana:'ぎょうざ'},
+  {jp:'拉麺', kana:'らあめん'},
+  {jp:'炒飯', kana:'ちゃあはん'},
+  {jp:'味噌', kana:'みそ'},
+  {jp:'塩', kana:'しお'},
+  {jp:'胡椒', kana:'こしょう'},
+  {jp:'砂糖', kana:'さとう'},
+  {jp:'出汁', kana:'だし'},
+  {jp:'海苔', kana:'のり'},
+  {jp:'胡麻', kana:'ごま'},
+  {jp:'梅干し', kana:'うめぼし'},
+  {jp:'漬物', kana:'つけもの'},
+  {jp:'林檎', kana:'りんご'},
+  {jp:'蜜柑', kana:'みかん'},
+  {jp:'葡萄', kana:'ぶどう'},
+  {jp:'桃', kana:'もも'},
+  {jp:'苺', kana:'いちご'},
+  {jp:'西瓜', kana:'すいか'},
+  {jp:'檸檬', kana:'れもん'},
+  {jp:'柿', kana:'かき'},
+  {jp:'梨', kana:'なし'},
+  {jp:'栗', kana:'くり'},
+  {jp:'柚子', kana:'ゆず'},
+  {jp:'胡桃', kana:'くるみ'},
+  {jp:'杏', kana:'あんず'},
+  {jp:'無花果', kana:'いちじく'},
+  {jp:'林檎飴', kana:'りんごあめ'},
+  {jp:'犬', kana:'いぬ'},
+  {jp:'猫', kana:'ねこ'},
+  {jp:'兎', kana:'うさぎ'},
+  {jp:'狐', kana:'きつね'},
+  {jp:'狸', kana:'たぬき'},
+  {jp:'鹿', kana:'しか'},
+  {jp:'猿', kana:'さる'},
+  {jp:'熊', kana:'くま'},
+  {jp:'虎', kana:'とら'},
+  {jp:'獅子', kana:'しし'},
+  {jp:'象', kana:'ぞう'},
+  {jp:'麒麟', kana:'きりん'},
+  {jp:'馬', kana:'うま'},
+  {jp:'牛', kana:'うし'},
+  {jp:'豚', kana:'ぶた'},
+  {jp:'鶏', kana:'にわとり'},
+  {jp:'雀', kana:'すずめ'},
+  {jp:'燕', kana:'つばめ'},
+  {jp:'烏', kana:'からす'},
+  {jp:'鶴', kana:'つる'},
+  {jp:'鷲', kana:'わし'},
+  {jp:'梟', kana:'ふくろう'},
+  {jp:'鯨', kana:'くじら'},
+  {jp:'海豚', kana:'いるか'},
+  {jp:'栗鼠', kana:'りす'},
+  {jp:'駱駝', kana:'らくだ'},
+  {jp:'雲', kana:'くも'},
+  {jp:'雨', kana:'あめ'},
+  {jp:'雪', kana:'ゆき'},
+  {jp:'風', kana:'かぜ'},
+  {jp:'空', kana:'そら'},
+  {jp:'海', kana:'うみ'},
+  {jp:'山', kana:'やま'},
+  {jp:'川', kana:'かわ'},
+  {jp:'森', kana:'もり'},
+  {jp:'湖', kana:'みずうみ'},
+  {jp:'太陽', kana:'たいよう'},
+  {jp:'月', kana:'つき'},
+  {jp:'星', kana:'ほし'},
+  {jp:'地球', kana:'ちきゅう'},
+  {jp:'朝日', kana:'あさひ'},
+  {jp:'夕焼け', kana:'ゆうやけ'},
+  {jp:'稲妻', kana:'いなずま'},
+  {jp:'台風', kana:'たいふう'},
+  {jp:'虹', kana:'にじ'},
+  {jp:'砂浜', kana:'すなはま'},
+  {jp:'渓谷', kana:'けいこく'},
+  {jp:'湿原', kana:'しつげん'},
+  {jp:'紅葉', kana:'もみじ'},
+  {jp:'桜', kana:'さくら'},
+  {jp:'電車', kana:'でんしゃ'},
+  {jp:'新幹線', kana:'しんかんせん'},
+  {jp:'自転車', kana:'じてんしゃ'},
+  {jp:'自動車', kana:'じどうしゃ'},
+  {jp:'飛行機', kana:'ひこうき'},
+  {jp:'船', kana:'ふね'},
+  {jp:'駅', kana:'えき'},
+  {jp:'空港', kana:'くうこう'},
+  {jp:'港', kana:'みなと'},
+  {jp:'道路', kana:'どうろ'},
+  {jp:'地下鉄', kana:'ちかてつ'},
+  {jp:'交差点', kana:'こうさてん'},
+  {jp:'高速道路', kana:'こうそくどうろ'},
+  {jp:'時刻表', kana:'じこくひょう'},
+  {jp:'改札口', kana:'かいさつぐち'},
+  {jp:'踏切', kana:'ふみきり'},
+  {jp:'学校', kana:'がっこう'},
+  {jp:'会社', kana:'かいしゃ'},
+  {jp:'病院', kana:'びょういん'},
+  {jp:'薬局', kana:'やっきょく'},
+  {jp:'図書館', kana:'としょかん'},
+  {jp:'公園', kana:'こうえん'},
+  {jp:'映画館', kana:'えいがかん'},
+  {jp:'美術館', kana:'びじゅつかん'},
+  {jp:'水族館デート', kana:'すいぞくかんでーと'},
+  {jp:'市役所', kana:'しやくしょ'},
+  {jp:'銀行', kana:'ぎんこう'},
+  {jp:'消防署', kana:'しょうぼうしょ'},
+  {jp:'交番', kana:'こうばん'},
+  {jp:'工場', kana:'こうじょう'},
+  {jp:'研究所', kana:'けんきゅうじょ'},
+  {jp:'東京', kana:'とうきょう'},
+  {jp:'大阪', kana:'おおさか'},
+  {jp:'京都', kana:'きょうと'},
+  {jp:'奈良', kana:'なら'},
+  {jp:'神戸', kana:'こうべ'},
+  {jp:'札幌', kana:'さっぽろ'},
+  {jp:'仙台', kana:'せんだい'},
+  {jp:'名古屋', kana:'なごや'},
+  {jp:'広島', kana:'ひろしま'},
+  {jp:'福岡', kana:'ふくおか'},
+  {jp:'沖縄', kana:'おきなわ'},
+  {jp:'北海道', kana:'ほっかいどう'},
+  {jp:'富士山', kana:'ふじさん'},
+  {jp:'琵琶湖', kana:'びわこ'},
+  {jp:'瀬戸内海', kana:'せとないかい'},
+  {jp:'情報', kana:'じょうほう'},
+  {jp:'通信', kana:'つうしん'},
+  {jp:'電源', kana:'でんげん'},
+  {jp:'画面', kana:'がめん'},
+  {jp:'保存', kana:'ほぞん'},
+  {jp:'検索', kana:'けんさく'},
+  {jp:'更新', kana:'こうしん'},
+  {jp:'設定', kana:'せってい'},
+  {jp:'確認', kana:'かくにん'},
+  {jp:'入力', kana:'にゅうりょく'},
+  {jp:'出力', kana:'しゅつりょく'},
+  {jp:'印刷', kana:'いんさつ'},
+  {jp:'編集', kana:'へんしゅう'},
+  {jp:'共有', kana:'きょうゆう'},
+  {jp:'接続', kana:'せつぞく'},
+  {jp:'記録', kana:'きろく'},
+  {jp:'分析', kana:'ぶんせき'},
+  {jp:'計算', kana:'けいさん'},
+  {jp:'設計', kana:'せっけい'},
+  {jp:'開発', kana:'かいはつ'},
+  {jp:'認証', kana:'にんしょう'},
+  {jp:'暗号', kana:'あんごう'},
+  {jp:'起動', kana:'きどう'},
+  {jp:'終了', kana:'しゅうりょう'},
+  {jp:'同期', kana:'どうき'},
+  {jp:'通知', kana:'つうち'},
+  {jp:'拡張', kana:'かくちょう'},
+  {jp:'圧縮', kana:'あっしゅく'},
+  {jp:'展開', kana:'てんかい'},
+  {jp:'検証', kana:'けんしょう'},
+  {jp:'顧客', kana:'こきゃく'},
+  {jp:'会議', kana:'かいぎ'},
+  {jp:'資料', kana:'しりょう'},
+  {jp:'報告', kana:'ほうこく'},
+  {jp:'予定', kana:'よてい'},
+  {jp:'締切', kana:'しめきり'},
+  {jp:'注文', kana:'ちゅうもん'},
+  {jp:'請求', kana:'せいきゅう'},
+  {jp:'納品', kana:'のうひん'},
+  {jp:'在庫', kana:'ざいこ'},
+  {jp:'品質', kana:'ひんしつ'},
+  {jp:'安全', kana:'あんぜん'},
+  {jp:'点検', kana:'てんけん'},
+  {jp:'修理', kana:'しゅうり'},
+  {jp:'交換', kana:'こうかん'},
+  {jp:'故障', kana:'こしょう'},
+  {jp:'原因', kana:'げんいん'},
+  {jp:'対策', kana:'たいさく'},
+  {jp:'改善', kana:'かいぜん'},
+  {jp:'手順', kana:'てじゅん'},
+  {jp:'受付', kana:'うけつけ'},
+  {jp:'見積', kana:'みつもり'},
+  {jp:'契約', kana:'けいやく'},
+  {jp:'承認', kana:'しょうにん'},
+  {jp:'教育', kana:'きょういく'},
+  {jp:'評価', kana:'ひょうか'},
+  {jp:'歴史', kana:'れきし'},
+  {jp:'文化', kana:'ぶんか'},
+  {jp:'科学', kana:'かがく'},
+  {jp:'数学', kana:'すうがく'},
+  {jp:'国語', kana:'こくご'},
+  {jp:'英語', kana:'えいご'},
+  {jp:'音楽', kana:'おんがく'},
+  {jp:'体育', kana:'たいいく'},
+  {jp:'料理', kana:'りょうり'},
+  {jp:'旅行', kana:'りょこう'},
+  {jp:'写真', kana:'しゃしん'},
+  {jp:'読書', kana:'どくしょ'},
+  {jp:'散歩', kana:'さんぽ'},
+  {jp:'睡眠', kana:'すいみん'},
+  {jp:'運動', kana:'うんどう'},
+  {jp:'挑戦', kana:'ちょうせん'},
+  {jp:'集中', kana:'しゅうちゅう'},
+  {jp:'成功', kana:'せいこう'},
+  {jp:'努力', kana:'どりょく'},
+  {jp:'希望', kana:'きぼう'},
+  {jp:'未来', kana:'みらい'},
+  {jp:'記憶', kana:'きおく'},
+  {jp:'経験', kana:'けいけん'},
+  {jp:'発見', kana:'はっけん'},
+  {jp:'冒険', kana:'ぼうけん'},
+  {jp:'約束', kana:'やくそく'},
+  {jp:'感謝', kana:'かんしゃ'},
+  {jp:'笑顔', kana:'えがお'},
+  {jp:'仲間', kana:'なかま'},
+  {jp:'家族', kana:'かぞく'},
+  {jp:'時間', kana:'じかん'},
+  {jp:'時計', kana:'とけい'},
+  {jp:'季節', kana:'きせつ'},
+  {jp:'花火', kana:'はなび'},
+  {jp:'洗濯', kana:'せんたく'},
+  {jp:'掃除', kana:'そうじ'},
+  {jp:'買物', kana:'かいもの'},
+  {jp:'朝食', kana:'ちょうしょく'},
+  {jp:'昼食', kana:'ちゅうしょく'},
+  {jp:'夕食', kana:'ゆうしょく'},
+  {jp:'新聞', kana:'しんぶん'},
+  {jp:'電話', kana:'でんわ'},
+  {jp:'手紙', kana:'てがみ'},
+  {jp:'荷物', kana:'にもつ'},
+  {jp:'鍵', kana:'かぎ'},
+  {jp:'財布', kana:'さいふ'},
+  {jp:'眼鏡', kana:'めがね'},
+  {jp:'傘', kana:'かさ'},
+  {jp:'鞄', kana:'かばん'},
+  {jp:'日本語', kana:'にほんご'},
+  {jp:'言葉', kana:'ことば'},
+  {jp:'文章', kana:'ぶんしょう'},
+  {jp:'発音', kana:'はつおん'},
+  {jp:'翻訳', kana:'ほんやく'},
+  {jp:'練習', kana:'れんしゅう'},
+  {jp:'速度', kana:'そくど'},
+  {jp:'正確', kana:'せいかく'},
+  {jp:'連続', kana:'れんぞく'},
+  {jp:'最高', kana:'さいこう'},
+  {jp:'特殊', kana:'とくしゅ'},
+  {jp:'許可', kana:'きょか'},
+  {jp:'特許', kana:'とっきょ'},
+  {jp:'出張', kana:'しゅっちょう'},
+  {jp:'準備', kana:'じゅんび'},
+  {jp:'資料館', kana:'しりょうかん'},
+  {jp:'消防車', kana:'しょうぼうしゃ'},
+  {jp:'救急車', kana:'きゅうきゅうしゃ'},
+  {jp:'観覧車', kana:'かんらんしゃ'},
+  {jp:'遊園地', kana:'ゆうえんち'},
+  {jp:'温泉旅館', kana:'おんせんりょかん'},
+  {jp:'土産物', kana:'みやげもの'},
+  {jp:'商店街', kana:'しょうてんがい'},
+  {jp:'待合室', kana:'まちあいしつ'},
+  {jp:'非常口', kana:'ひじょうぐち'},
+  {jp:'案内表示', kana:'あんないひょうじ'},
+  {jp:'乗換案内', kana:'のりかえあんない'},
+  {jp:'指定席券', kana:'していせきけん'},
+  {jp:'観光案内所', kana:'かんこうあんないじょ'},
+  {jp:'駅前広場', kana:'えきまえひろば'},
+  {jp:'海鮮丼', kana:'かいせんどん'},
+  {jp:'回転寿司', kana:'かいてんずし'},
+  {jp:'注文画面', kana:'ちゅうもんがめん'},
+  {jp:'会計伝票', kana:'かいけいでんぴょう'},
+  {jp:'予約確認', kana:'よやくかくにん'},
+  {jp:'整理券番号', kana:'せいりけんばんごう'},
+  {jp:'季節限定', kana:'きせつげんてい'},
+  {jp:'人気商品', kana:'にんきしょうひん'},
+  {jp:'新商品紹介', kana:'しんしょうひんしょうかい'},
+  {jp:'おすすめ料理', kana:'おすすめりょうり'},
+  {jp:'焼き立てパン', kana:'やきたてぱん'},
+  {jp:'手作り弁当', kana:'てづくりべんとう'},
+  {jp:'冷凍食品', kana:'れいとうしょくひん'},
+  {jp:'栄養成分', kana:'えいようせいぶん'},
+  {jp:'賞味期限', kana:'しょうみきげん'},
+  {jp:'情報共有', kana:'じょうほうきょうゆう'},
+  {jp:'画面共有', kana:'がめんきょうゆう'},
+  {jp:'資料作成', kana:'しりょうさくせい'},
+  {jp:'会議資料', kana:'かいぎしりょう'},
+  {jp:'報告書作成', kana:'ほうこくしょさくせい'},
+  {jp:'作業報告書', kana:'さぎょうほうこくしょ'},
+  {jp:'点検記録表', kana:'てんけんきろくひょう'},
+  {jp:'交換部品一覧', kana:'こうかんぶひんいちらん'},
+  {jp:'不具合調査', kana:'ふぐあいちょうさ'},
+  {jp:'原因分析', kana:'げんいんぶんせき'},
+  {jp:'再発防止策', kana:'さいはつぼうしさく'},
+  {jp:'改善提案書', kana:'かいぜんていあんしょ'},
+  {jp:'業務効率化', kana:'ぎょうむこうりつか'},
+  {jp:'品質管理', kana:'ひんしつかんり'},
+  {jp:'安全管理', kana:'あんぜんかんり'},
+  {jp:'在庫管理', kana:'ざいこかんり'},
+  {jp:'顧客対応', kana:'こきゃくたいおう'},
+  {jp:'電話応対', kana:'でんわおうたい'},
+  {jp:'見積依頼書', kana:'みつもりいらいしょ'},
+  {jp:'請求書番号', kana:'せいきゅうしょばんごう'},
+  {jp:'納品予定日', kana:'のうひんよていび'},
+  {jp:'出張申請', kana:'しゅっちょうしんせい'},
+  {jp:'交通費精算', kana:'こうつうひせいさん'},
+  {jp:'承認依頼', kana:'しょうにんいらい'},
+  {jp:'教育資料', kana:'きょういくしりょう'},
+  {jp:'操作説明書', kana:'そうさせつめいしょ'},
+  {jp:'利用規約', kana:'りようきやく'},
+  {jp:'個人情報', kana:'こじんじょうほう'},
+  {jp:'機密情報', kana:'きみつじょうほう'},
+  {jp:'認証番号', kana:'にんしょうばんごう'},
+  {jp:'暗証番号', kana:'あんしょうばんごう'},
+  {jp:'接続確認', kana:'せつぞくかくにん'},
+  {jp:'通信速度', kana:'つうしんそくど'},
+  {jp:'保存場所', kana:'ほぞんばしょ'},
+  {jp:'検索条件', kana:'けんさくじょうけん'},
+  {jp:'印刷設定', kana:'いんさつせってい'},
+  {jp:'自動保存', kana:'じどうほぞん'},
+  {jp:'定期更新', kana:'ていきこうしん'},
+  {jp:'バックアップ', kana:'ばっくあっぷ'},
+  {jp:'アップロード', kana:'あっぷろーど'},
+  {jp:'ダウンロード', kana:'だうんろーど'},
+  {jp:'ブラウザ拡張', kana:'ぶらうざかくちょう'},
+  {jp:'ショートカット', kana:'しょーとかっと'},
+  {jp:'キーボード操作', kana:'きーぼーどそうさ'},
+  {jp:'マウス操作', kana:'まうすそうさ'},
+  {jp:'ファイル検索', kana:'ふぁいるけんさく'},
+  {jp:'フォルダ整理', kana:'ふぉるだせいり'},
+  {jp:'パスワード', kana:'ぱすわーど'},
+  {jp:'セキュリティ', kana:'せきゅりてぃ'},
+  {jp:'ネットワーク', kana:'ねっとわーく'},
+  {jp:'データベース', kana:'でーたべーす'},
+  {jp:'プログラム', kana:'ぷろぐらむ'},
+  {jp:'アプリケーション', kana:'あぷりけーしょん'},
+  {jp:'環境問題', kana:'かんきょうもんだい'},
+  {jp:'自然観察', kana:'しぜんかんさつ'},
+  {jp:'天気予報', kana:'てんきよほう'},
+  {jp:'気象情報', kana:'きしょうじょうほう'},
+  {jp:'防災訓練', kana:'ぼうさいくんれん'},
+  {jp:'非常用品', kana:'ひじょうようひん'},
+  {jp:'緊急連絡先', kana:'きんきゅうれんらくさき'},
+  {jp:'避難経路', kana:'ひなんけいろ'},
+  {jp:'交通安全', kana:'こうつうあんぜん'},
+  {jp:'健康診断', kana:'けんこうしんだん'},
+  {jp:'体調管理', kana:'たいちょうかんり'},
+  {jp:'睡眠不足', kana:'すいみんぶそく'},
+  {jp:'生活習慣', kana:'せいかつしゅうかん'},
+  {jp:'読書感想文', kana:'どくしょかんそうぶん'},
+  {jp:'自由研究', kana:'じゆうけんきゅう'},
+  {jp:'卒業証書', kana:'そつぎょうしょうしょ'},
+  {jp:'入学説明会', kana:'にゅうがくせつめいかい'},
+  {jp:'文化祭準備', kana:'ぶんかさいじゅんび'},
+  {jp:'運動会練習', kana:'うんどうかいれんしゅう'},
+  {jp:'修学旅行', kana:'しゅうがくりょこう'},
+  {jp:'夏休み計画', kana:'なつやすみけいかく'},
+  {jp:'冬休み課題', kana:'ふゆやすみかだい'},
+  {jp:'家族旅行', kana:'かぞくりょこう'},
+  {jp:'記念写真', kana:'きねんしゃしん'},
+  {jp:'夕焼け空', kana:'ゆうやけぞら'},
+  {jp:'青空市場', kana:'あおぞらいちば'},
+  {jp:'世界遺産', kana:'せかいいさん'},
+  {jp:'伝統工芸', kana:'でんとうこうげい'},
+  {jp:'郷土料理', kana:'きょうどりょうり'},
+  {jp:'地域交流', kana:'ちいきこうりゅう'},
+  {jp:'国際交流', kana:'こくさいこうりゅう'},
+  {jp:'未来都市', kana:'みらいとし'},
+  {jp:'宇宙旅行', kana:'うちゅうりょこう'},
+  {jp:'人工知能', kana:'じんこうちのう'},
+  {jp:'音声認識', kana:'おんせいにんしき'},
+  {jp:'画像処理', kana:'がぞうしょり'},
+  {jp:'自動翻訳', kana:'じどうほんやく'},
+  {jp:'電子書籍', kana:'でんししょせき'},
+  {jp:'動画編集', kana:'どうがへんしゅう'},
+  {jp:'音楽配信', kana:'おんがくはいしん'},
+  {jp:'映画鑑賞', kana:'えいがかんしょう'},
+  {jp:'年末調整書類', kana:'ねんまつちょうせいしょるい'},
+  {jp:'緊急メンテナンス', kana:'きんきゅうめんてなんす'},
+  {jp:'定期点検スケジュール', kana:'ていきてんけんすけじゅーる'},
+  {jp:'お客様相談窓口', kana:'おきゃくさまそうだんまどぐち'},
+  {jp:'オンライン予約確認', kana:'おんらいんよやくかくにん'},
+  {jp:'ソフトウェア更新通知', kana:'そふとうぇあこうしんつうち'},
+  {jp:'ハードウェア故障診断', kana:'はーどうぇあこしょうしんだん'},
+  {jp:'ネットワーク接続設定', kana:'ねっとわーくせつぞくせってい'},
+  {jp:'セキュリティ対策会議', kana:'せきゅりてぃたいさくかいぎ'},
+  {jp:'バックアップ保存先', kana:'ばっくあっぷほぞんさき'},
+  {jp:'ファイル名変更手順', kana:'ふぁいるめいへんこうてじゅん'},
+  {jp:'ログイン認証エラー', kana:'ろぐいんにんしょうえらー'},
+  {jp:'パスワード再設定', kana:'ぱすわーどさいせってい'},
+  {jp:'データ移行チェック', kana:'でーたいこうちぇっく'},
+  {jp:'メール通知テンプレート', kana:'めーるつうちてんぷれーと'},
+  {jp:'ブラウザ表示倍率', kana:'ぶらうざひょうじばいりつ'},
+  {jp:'キーボードショートカット', kana:'きーぼーどしょーとかっと'},
+  {jp:'作業手順書改訂版', kana:'さぎょうてじゅんしょかいていばん'},
+  {jp:'品質改善プロジェクト', kana:'ひんしつかいぜんぷろじぇくと'},
+  {jp:'顧客満足度アンケート', kana:'こきゃくまんぞくどあんけーと'},
+  {jp:'社内勉強会資料', kana:'しゃないべんきょうかいしりょう'},
+  {jp:'製品番号入力画面', kana:'せいひんばんごうにゅうりょくがめん'},
+  {jp:'問い合わせ受付番号', kana:'といあわせうけつけばんごう'},
+  {jp:'在庫不足アラート', kana:'ざいこぶそくあらーと'},
+  {jp:'請求金額確認画面', kana:'せいきゅうきんがくかくにんがめん'},
+  {jp:'納期遅延のお知らせ', kana:'のうきちえんのおしらせ'},
+  {jp:'経費精算ワークフロー', kana:'けいひせいさんわーくふろー'},
+  {jp:'議事録自動作成', kana:'ぎじろくじどうさくせい'},
+  {jp:'音声入力テスト', kana:'おんせいにゅうりょくてすと'},
+  {jp:'画像ファイル圧縮', kana:'がぞうふぁいるあっしゅく'},
+  {jp:'印刷プレビュー確認', kana:'いんさつぷれびゅーかくにん'},
+  {jp:'共有フォルダ整理', kana:'きょうゆうふぉるだせいり'},
+  {jp:'電子署名サービス', kana:'でんししょめいさーびす'},
+  {jp:'クラウド同期設定', kana:'くらうどどうきせってい'},
+  {jp:'モバイル端末管理', kana:'もばいるたんまつかんり'},
+  {jp:'多要素認証コード', kana:'たようそにんしょうこーど'},
+  {jp:'業務マニュアル検索', kana:'ぎょうむまにゅあるけんさく'},
+  {jp:'化学物質管理台帳', kana:'かがくぶっしつかんりだいちょう'},
+  {jp:'安全データシート', kana:'あんぜんでーたしーと'},
+  {jp:'リスクアセスメント', kana:'りすくあせすめんと'},
+  {jp:'保守サービス部門', kana:'ほしゅさーびすぶもん'},
+  {jp:'医療機器メンテナンス', kana:'いりょうききめんてなんす'},
+  {jp:'装置トラブル対応', kana:'そうちとらぶるたいおう'},
+  {jp:'遠隔サポート接続', kana:'えんかくさぽーとせつぞく'},
+  {jp:'交換部品発送手配', kana:'こうかんぶひんはっそうてはい'},
+  {jp:'点検結果レビュー', kana:'てんけんけっかれびゅー'},
+  {jp:'作業報告書ナレッジ化', kana:'さぎょうほうこくしょなれっじか'},
+  {jp:'トラブル再現テスト', kana:'とらぶるさいげんてすと'},
+  {jp:'故障原因切り分け', kana:'こしょうげんいんきりわけ'},
+  {jp:'ユーザー操作説明', kana:'ゆーざーそうさせつめい'},
+  {jp:'今日はいい天気です', kana:'きょうはいいてんきです', typeKana:'きょうはいいてんきです', kind:'sentence'},
+  {jp:'明日は朝から会議です', kana:'あしたはあさからかいぎです', typeKana:'あしたはあさからかいぎです', kind:'sentence'},
+  {jp:'駅まで歩いて行きます', kana:'えきまであるいていきます', kind:'sentence'},
+  {jp:'資料を確認してください', kana:'しりょうをかくにんしてください', kind:'sentence'},
+  {jp:'画面を見ながら入力します', kana:'がめんをみながらにゅうりょくします', kind:'sentence'},
+  {jp:'新しい予定を追加します', kana:'あたらしいよていをついかします', kind:'sentence'},
+  {jp:'メールを送っておきます', kana:'めーるをおくっておきます', kind:'sentence'},
+  {jp:'安全第一で作業します', kana:'あんぜんだいいちでさぎょうします', kind:'sentence'},
+  {jp:'結果をあとで共有します', kana:'けっかをあとできょうゆうします', kind:'sentence'},
+  {jp:'会議の時間を変更します', kana:'かいぎのじかんをへんこうします', kind:'sentence'},
+  {jp:'次の電車に乗ります', kana:'つぎのでんしゃにのります', kind:'sentence'},
+  {jp:'雨なので傘を持ちます', kana:'あめなのでかさをもちます', kind:'sentence'},
+  {jp:'朝食を食べて出発します', kana:'ちょうしょくをたべてしゅっぱつします', kind:'sentence'},
+  {jp:'公園で犬と散歩します', kana:'こうえんでいぬとさんぽします', kind:'sentence'},
+  {jp:'図書館で本を借ります', kana:'としょかんでほんをかります', kind:'sentence'},
+  {jp:'映画館で映画を見ます', kana:'えいがかんでえいがをみます', kind:'sentence'},
+  {jp:'温かい味噌汁を飲みます', kana:'あたたかいみそしるをのみます', kind:'sentence'},
+  {jp:'週末に家族で旅行します', kana:'しゅうまつにかぞくでりょこうします', kind:'sentence'},
+  {jp:'写真を整理して保存します', kana:'しゃしんをせいりしてほぞんします', kind:'sentence'},
+  {jp:'注文内容を確認します', kana:'ちゅうもんないようをかくにんします', kind:'sentence'},
+  {jp:'お客様に電話をかけます', kana:'おきゃくさまにでんわをかけます', kind:'sentence'},
+  {jp:'作業手順をもう一度見ます', kana:'さぎょうてじゅんをもういちどみます', kind:'sentence'},
+  {jp:'不明点を先輩に相談します', kana:'ふめいてんをせんぱいにそうだんします', kind:'sentence'},
+  {jp:'報告書を丁寧に書きます', kana:'ほうこくしょをていねいにかきます', kind:'sentence'},
+  {jp:'締切までに資料を作ります', kana:'しめきりまでにしりょうをつくります', kind:'sentence'},
+  {jp:'午後から現場へ向かいます', kana:'ごごからげんばへむかいます', kind:'sentence'},
+  {jp:'部品の在庫を確認します', kana:'ぶひんのざいこをかくにんします', kind:'sentence'},
+  {jp:'予定表にメモを残します', kana:'よていひょうにめもをのこします', kind:'sentence'},
+  {jp:'電源を切ってから交換します', kana:'でんげんをきってからこうかんします', kind:'sentence'},
+  {jp:'原因を調べて対策します', kana:'げんいんをしらべてたいさくします', kind:'sentence'},
+  {jp:'入力ミスに気をつけます', kana:'にゅうりょくみすにきをつけます', kind:'sentence'},
+  {jp:'ゆっくり正確に打ちます', kana:'ゆっくりせいかくにうちます', kind:'sentence'},
+  {jp:'最後まで集中して続けます', kana:'さいごまでしゅうちゅうしてつづけます', kind:'sentence'},
+  {jp:'難しい単語にも挑戦します', kana:'むずかしいたんごにもちょうせんします', kind:'sentence'},
+  {jp:'連続成功でコンボを伸ばします', kana:'れんぞくせいこうでこんぼをのばします', kind:'sentence'},
+  {jp:'焦らずリズムよく入力します', kana:'あせらずりずむよくにゅうりょくします', kind:'sentence'},
+  {jp:'長い文章は落ち着いて打ちます', kana:'ながいぶんしょうはおちついてうちます', typeKana:'ながいぶんしょうはおちついてうちます', kind:'sentence'},
+  {jp:'表示された読みをそのまま打ちます', kana:'ひょうじされたよみをそのままうちます', kind:'sentence'},
+  {jp:'正確さを大切にします', kana:'せいかくさをたいせつにします', kind:'sentence'},
+  {jp:'寿司が流れる前に打ち切ります', kana:'すしがながれるまえにうちきります', kind:'sentence'},
+  {jp:'画面中央のお題を読みます', kana:'がめんちゅうおうのおだいをよみます', kind:'sentence'},
+  {jp:'次のお皿がすぐに来ます', kana:'つぎのおさらがすぐにきます', kind:'sentence'},
+  {jp:'音を聞きながら練習します', kana:'おとをききながられんしゅうします', kind:'sentence'},
+  {jp:'ベストスコアを更新します', kana:'べすとすこあをこうしんします', kind:'sentence'},
+  {jp:'今日は少し速く打てます', kana:'きょうはすこしはやくうてます', typeKana:'きょうはすこしはやくうてます', kind:'sentence'},
+  {jp:'新しい言葉を覚えます', kana:'あたらしいことばをおぼえます', kind:'sentence'},
+  {jp:'ローマ字入力を練習します', kana:'ろーまじにゅうりょくをれんしゅうします', kind:'sentence'},
+  {jp:'日本語の読みを確認します', kana:'にほんごのよみをかくにんします', kind:'sentence'},
+  {jp:'短い単語から始めます', kana:'みじかいたんごからはじめます', kind:'sentence'},
+  {jp:'長い単語にも慣れていきます', kana:'ながいたんごにもなれていきます', kind:'sentence'},
+  {jp:'文章の途中で止まらないようにします', kana:'ぶんしょうのとちゅうでとまらないようにします', kind:'sentence'},
+  {jp:'結果画面で成績を確認します', kana:'けっかがめんでせいせきをかくにんします', kind:'sentence'},
+  {jp:'もう一度スタートします', kana:'もういちどすたーとします', kind:'sentence'},
+  {jp:'今日はここまで練習します', kana:'きょうはここまでれんしゅうします', typeKana:'きょうはここまでれんしゅうします', kind:'sentence'},
+  {jp:'朝の空気はとても気持ちいいです', kana:'あさのくうきはとてもきもちいいです', typeKana:'あさのくうきはとてもきもちいいです', kind:'sentence'},
+  {jp:'夕方の駅前は少し混みます', kana:'ゆうがたのえきまえはすこしこみます', typeKana:'ゆうがたのえきまえはすこしこみます', kind:'sentence'},
+  {jp:'机の上をきれいに片付けます', kana:'つくえのうえをきれいにかたづけます', kind:'sentence'},
+  {jp:'新しい靴で公園を歩きます', kana:'あたらしいくつでこうえんをあるきます', kind:'sentence'},
+  {jp:'冷たい水をゆっくり飲みます', kana:'つめたいみずをゆっくりのみます', kind:'sentence'},
+  {jp:'大切な予定を忘れないようにします', kana:'たいせつなよていをわすれないようにします', kind:'sentence'},
+  {jp:'入力した内容を保存します', kana:'にゅうりょくしたないようをほぞんします', kind:'sentence'},
+  {jp:'共有フォルダの場所を確認します', kana:'きょうゆうふぉるだのばしょをかくにんします', kind:'sentence'},
+  {jp:'画面の表示を少し大きくします', kana:'がめんのひょうじをすこしおおきくします', kind:'sentence'},
+  {jp:'必要なファイルを検索します', kana:'ひつようなふぁいるをけんさくします', kind:'sentence'},
+  {jp:'会議の前に資料を印刷します', kana:'かいぎのまえにしりょうをいんさつします', kind:'sentence'},
+  {jp:'説明を聞いてから操作します', kana:'せつめいをきいてからそうさします', kind:'sentence'},
+  {jp:'安全確認をしてから作業します', kana:'あんぜんかくにんをしてからさぎょうします', kind:'sentence'},
+  {jp:'不具合の内容を詳しく記録します', kana:'ふぐあいのないようをくわしくきろくします', kind:'sentence'},
+  {jp:'お客様の状況を丁寧に聞きます', kana:'おきゃくさまのじょうきょうをていねいにききます', kind:'sentence'},
+  {jp:'交換した部品を一覧に残します', kana:'こうかんしたぶひんをいちらんにのこします', kind:'sentence'},
+  {jp:'帰る前に忘れ物を確認します', kana:'かえるまえにわすれものをかくにんします', kind:'sentence'},
+  {jp:'明日の準備を今日のうちにします', kana:'あしたのじゅんびをきょうのうちにします', kind:'sentence'},
+  {jp:'落ち着いて最後の一文字まで入力します', kana:'おちついてさいごのいちもじまでにゅうりょくします', kind:'sentence'},
+  {jp:'銀河', kana:'ぎんが'},
+  {jp:'惑星', kana:'わくせい'},
+  {jp:'彗星', kana:'すいせい'},
+  {jp:'流星群', kana:'りゅうせいぐん'},
+  {jp:'天文台', kana:'てんもんだい'},
+  {jp:'深海', kana:'しんかい'},
+  {jp:'珊瑚礁', kana:'さんごしょう'},
+  {jp:'砂漠', kana:'さばく'},
+  {jp:'氷河', kana:'ひょうが'},
+  {jp:'火山灰', kana:'かざんばい'},
+  {jp:'森林浴', kana:'しんりんよく'},
+  {jp:'野鳥観察', kana:'やちょうかんさつ'},
+  {jp:'雨音', kana:'あまおと'},
+  {jp:'朝焼け', kana:'あさやけ'},
+  {jp:'夕立', kana:'ゆうだち'},
+  {jp:'木漏れ日', kana:'こもれび'},
+  {jp:'万華鏡', kana:'まんげきょう'},
+  {jp:'陶芸', kana:'とうげい'},
+  {jp:'版画', kana:'はんが'},
+  {jp:'水彩画', kana:'すいさいが'},
+  {jp:'交響曲', kana:'こうきょうきょく'},
+  {jp:'合唱団', kana:'がっしょうだん'},
+  {jp:'能楽堂', kana:'のうがくどう'},
+  {jp:'茶道具', kana:'さどうぐ'},
+  {jp:'俳句', kana:'はいく'},
+  {jp:'短歌', kana:'たんか'},
+  {jp:'古墳', kana:'こふん'},
+  {jp:'城下町', kana:'じょうかまち'},
+  {jp:'街道', kana:'かいどう'},
+  {jp:'博物館', kana:'はくぶつかん'},
+  {jp:'考古学', kana:'こうこがく'},
+  {jp:'民俗学', kana:'みんぞくがく'},
+  {jp:'羅針盤', kana:'らしんばん'},
+  {jp:'灯台', kana:'とうだい'},
+  {jp:'港町', kana:'みなとまち'},
+  {jp:'寝台列車', kana:'しんだいれっしゃ'},
+  {jp:'路面電車', kana:'ろめんでんしゃ'},
+  {jp:'自転車道', kana:'じてんしゃどう'},
+  {jp:'航空券', kana:'こうくうけん'},
+  {jp:'旅程表', kana:'りょていひょう'},
+  {jp:'登山靴', kana:'とざんぐつ'},
+  {jp:'キャンプ場', kana:'きゃんぷじょう'},
+  {jp:'望遠鏡', kana:'ぼうえんきょう'},
+  {jp:'顕微鏡', kana:'けんびきょう'},
+  {jp:'実験室', kana:'じっけんしつ'},
+  {jp:'周期表', kana:'しゅうきひょう'},
+  {jp:'重力波', kana:'じゅうりょくは'},
+  {jp:'光合成', kana:'こうごうせい'},
+  {jp:'生態系', kana:'せいたいけい'},
+  {jp:'遺伝子', kana:'いでんし'},
+  {jp:'免疫力', kana:'めんえきりょく'},
+  {jp:'体温計', kana:'たいおんけい'},
+  {jp:'救急箱', kana:'きゅうきゅうばこ'},
+  {jp:'防災袋', kana:'ぼうさいぶくろ'},
+  {jp:'避難所', kana:'ひなんじょ'},
+  {jp:'消火器', kana:'しょうかき'},
+  {jp:'給水所', kana:'きゅうすいじょ'},
+  {jp:'風力発電', kana:'ふうりょくはつでん'},
+  {jp:'太陽光', kana:'たいようこう'},
+  {jp:'水力発電', kana:'すいりょくはつでん'},
+  {jp:'循環型社会', kana:'じゅんかんがたしゃかい'},
+  {jp:'市場調査', kana:'しじょうちょうさ'},
+  {jp:'為替相場', kana:'かわせそうば'},
+  {jp:'地方自治', kana:'ちほうじち'},
+  {jp:'国際会議', kana:'こくさいかいぎ'},
+  {jp:'投票所', kana:'とうひょうじょ'},
+  {jp:'新聞記者', kana:'しんぶんきしゃ'},
+  {jp:'編集長', kana:'へんしゅうちょう'},
+  {jp:'映画祭', kana:'えいがさい'},
+  {jp:'字幕翻訳', kana:'じまくほんやく'},
+  {jp:'舞台照明', kana:'ぶたいしょうめい'},
+  {jp:'写真展', kana:'しゃしんてん'},
+  {jp:'料理教室', kana:'りょうりきょうしつ'},
+  {jp:'発酵食品', kana:'はっこうしょくひん'},
+  {jp:'薬味', kana:'やくみ'},
+  {jp:'土鍋', kana:'どなべ'},
+  {jp:'弁当箱', kana:'べんとうばこ'},
+  {jp:'裁縫箱', kana:'さいほうばこ'},
+  {jp:'観葉植物', kana:'かんようしょくぶつ'},
+  {jp:'間接照明', kana:'かんせつしょうめい'},
+  {jp:'掃除機', kana:'そうじき'},
+  {jp:'洗濯表示', kana:'せんたくひょうじ'},
+  {jp:'宅配便', kana:'たくはいびん'},
+  {jp:'郵便局', kana:'ゆうびんきょく'},
+  {jp:'図鑑', kana:'ずかん'},
+  {jp:'百科事典', kana:'ひゃっかじてん'},
+  {jp:'朗読会', kana:'ろうどくかい'},
+  {jp:'語学学校', kana:'ごがくがっこう'},
+  {jp:'卒業式', kana:'そつぎょうしき'},
+  {jp:'研究発表', kana:'けんきゅうはっぴょう'},
+  {jp:'数学問題', kana:'すうがくもんだい'},
+  {jp:'体育館', kana:'たいいくかん'},
+  {jp:'陸上競技', kana:'りくじょうきょうぎ'},
+  {jp:'水泳大会', kana:'すいえいたいかい'},
+  {jp:'卓球台', kana:'たっきゅうだい'},
+  {jp:'審判員', kana:'しんぱんいん'},
+  {jp:'応援席', kana:'おうえんせき'},
+  {jp:'宇宙船は静かに軌道へ入ります', kana:'うちゅうせんはしずかにきどうへはいります', typeKana:'うちゅうせんはしずかにきどうへはいります', kind:'sentence'},
+  {jp:'海辺の町で古い灯台を見上げます', kana:'うみべのまちでふるいとうだいをみあげます', kind:'sentence'},
+  {jp:'森の中で小さな沢の音を聞きます', kana:'もりのなかでちいさなさわのおとをききます', kind:'sentence'},
+  {jp:'博物館で土器の模様を観察します', kana:'はくぶつかんでどきのもようをかんさつします', kind:'sentence'},
+  {jp:'交響曲の最後で客席が静まります', kana:'こうきょうきょくのさいごできゃくせきがしずまります', kind:'sentence'},
+  {jp:'茶室の入口で靴をそろえます', kana:'ちゃしつのいりぐちでくつをそろえます', kind:'sentence'},
+  {jp:'寝台列車で夜明けの山を眺めます', kana:'しんだいれっしゃでよあけのやまをながめます', kind:'sentence'},
+  {jp:'旅程表を見ながら乗り換えを確認します', kana:'りょていひょうをみながらのりかえをかくにんします', kind:'sentence'},
+  {jp:'顕微鏡で池の水を観察します', kana:'けんびきょうでいけのみずをかんさつします', kind:'sentence'},
+  {jp:'植物は光を受けて成長します', kana:'しょくぶつはひかりをうけてせいちょうします', typeKana:'しょくぶつはひかりをうけてせいちょうします', kind:'sentence'},
+  {jp:'救急箱の中身を定期的に確認します', kana:'きゅうきゅうばこのなかみをていきてきにかくにんします', kind:'sentence'},
+  {jp:'避難所までの道を家族で歩きます', kana:'ひなんじょまでのみちをかぞくであるきます', kind:'sentence'},
+  {jp:'風力発電の羽根が丘の上で回ります', kana:'ふうりょくはつでんのはねがおかのうえでまわります', kind:'sentence'},
+  {jp:'市場調査の結果をグラフにまとめます', kana:'しじょうちょうさのけっかをぐらふにまとめます', kind:'sentence'},
+  {jp:'新聞記者は現場の声を丁寧に拾います', kana:'しんぶんきしゃはげんばのこえをていねいにひろいます', typeKana:'しんぶんきしゃはげんばのこえをていねいにひろいます', kind:'sentence'},
+  {jp:'映画祭では世界中の作品が上映されます', kana:'えいがさいではせかいじゅうのさくひんがじょうえいされます', kind:'sentence'},
+  {jp:'舞台照明が役者の表情を引き立てます', kana:'ぶたいしょうめいがやくしゃのひょうじょうをひきたてます', kind:'sentence'},
+  {jp:'発酵食品は地域ごとに味が違います', kana:'はっこうしょくひんはちいきごとにあじがちがいます', typeKana:'はっこうしょくひんはちいきごとにあじがちがいます', kind:'sentence'},
+  {jp:'観葉植物に朝の光が差し込みます', kana:'かんようしょくぶつにあさのひかりがさしこみます', kind:'sentence'},
+  {jp:'宅配便の到着時間を確認します', kana:'たくはいびんのとうちゃくじかんをかくにんします', kind:'sentence'},
+  {jp:'図鑑を開いて昆虫の名前を調べます', kana:'ずかんをひらいてこんちゅうのなまえをしらべます', kind:'sentence'},
+  {jp:'朗読会で物語の余韻を味わいます', kana:'ろうどくかいでものがたりのよいんをあじわいます', kind:'sentence'},
+  {jp:'研究発表では質問の意図を聞き取ります', kana:'けんきゅうはっぴょうではしつもんのいとをききとります', kind:'sentence'},
+  {jp:'体育館に応援の声が響きます', kana:'たいいくかんにおうえんのこえがひびきます', kind:'sentence'},
+  {jp:'水泳大会の前に深呼吸をします', kana:'すいえいたいかいのまえにしんこきゅうをします', kind:'sentence'},
+  {jp:'雨上がりの道に夕日が映ります', kana:'あめあがりのみちにゆうひがうつります', kind:'sentence'},
+  {jp:'古い街道沿いに茶屋の跡が残ります', kana:'ふるいかいどうぞいにちゃやのあとがのこります', kind:'sentence'},
+  {jp:'字幕翻訳は言葉のリズムも大切です', kana:'じまくほんやくはことばのりずむもたいせつです', typeKana:'じまくほんやくはことばのりずむもたいせつです', kind:'sentence'},
+  {jp:'料理教室で旬の野菜を切ります', kana:'りょうりきょうしつでしゅんのやさいをきります', kind:'sentence'},
+  {jp:'地方自治について授業で話し合います', kana:'ちほうじちについてじゅぎょうではなしあいます', kind:'sentence'},
+  {jp:'推し活', kana:'おしかつ'},
+  {jp:'ぬい活', kana:'ぬいかつ'},
+  {jp:'界隈', kana:'かいわい'},
+  {jp:'ビジュいい', kana:'びじゅいい'},
+  {jp:'タイパ', kana:'たいぱ'},
+  {jp:'コスパ', kana:'こすぱ'},
+  {jp:'生成AI', kana:'せいせいえーあい'},
+  {jp:'チャッピー', kana:'ちゃっぴー'},
+  {jp:'ミャクミャク', kana:'みゃくみゃく'},
+  {jp:'めじるしアクセサリー', kana:'めじるしあくせさりー'},
+  {jp:'ガチャ詰めポーチ', kana:'がちゃづめぽーち'},
+  {jp:'風呂キャンセル界隈', kana:'ふろきゃんせるかいわい'},
+  {jp:'エッホエッホ', kana:'えっほえっほ'},
+  {jp:'沼る', kana:'ぬまる'},
+  {jp:'尊い', kana:'とうとい'},
+  {jp:'秒で返信', kana:'びょうでへんしん'},
+  {jp:'写真映え', kana:'しゃしんばえ'},
+  {jp:'ショート動画', kana:'しょーとどうが'},
+  {jp:'ライブ配信', kana:'らいぶはいしん'},
+  {jp:'コメント欄', kana:'こめんとらん'},
+  {jp:'拡散希望', kana:'かくさんきぼう'},
+  {jp:'通知オフ', kana:'つうちおふ'},
+  {jp:'ながら見', kana:'ながらみ'},
+  {jp:'朝活', kana:'あさかつ'},
+  {jp:'夜カフェ', kana:'よるかふぇ'},
+  {jp:'町中華', kana:'まちちゅうか'},
+  {jp:'クラフトコーラ', kana:'くらふとこーら'},
+  {jp:'スパイスカレー', kana:'すぱいすかれー'},
+  {jp:'アサイーボウル', kana:'あさいーぼうる'},
+  {jp:'米粉パン', kana:'こめこぱん'},
+  {jp:'塩パン', kana:'しおぱん'},
+  {jp:'サウナハット', kana:'さうなはっと'},
+  {jp:'外気浴', kana:'がいきよく'},
+  {jp:'整う', kana:'ととのう'},
+  {jp:'無人レジ', kana:'むじんれじ'},
+  {jp:'モバイル注文', kana:'もばいるちゅうもん'},
+  {jp:'スマートロック', kana:'すまーとろっく'},
+  {jp:'ワイヤレス充電', kana:'わいやれすじゅうでん'},
+  {jp:'折りたたみ傘', kana:'おりたたみがさ'},
+  {jp:'防災ポーチ', kana:'ぼうさいぽーち'},
+  {jp:'備蓄米', kana:'びちくまい'},
+  {jp:'熱中症対策', kana:'ねっちゅうしょうたいさく'},
+  {jp:'線状降水帯', kana:'せんじょうこうすいたい'},
+  {jp:'再配達', kana:'さいはいたつ'},
+  {jp:'置き配', kana:'おきはい'},
+  {jp:'電子処方箋', kana:'でんししょほうせん'},
+  {jp:'オンライン診療', kana:'おんらいんしんりょう'},
+  {jp:'地域通貨', kana:'ちいきつうか'},
+  {jp:'観光列車', kana:'かんこうれっしゃ'},
+  {jp:'駅弁', kana:'えきべん'},
+  {jp:'御朱印帳', kana:'ごしゅいんちょう'},
+  {jp:'古民家カフェ', kana:'こみんかかふぇ'},
+  {jp:'道の駅', kana:'みちのえき'},
+  {jp:'離島旅', kana:'りとうたび'},
+  {jp:'星空観察', kana:'ほしぞらかんさつ'},
+  {jp:'水族館', kana:'すいぞくかん'},
+  {jp:'深海魚', kana:'しんかいぎょ'},
+  {jp:'恐竜博', kana:'きょうりゅうはく'},
+  {jp:'宇宙食', kana:'うちゅうしょく'},
+  {jp:'月面探査', kana:'げつめんたんさ'},
+  {jp:'量子コンピューター', kana:'りょうしこんぴゅーたー'},
+  {jp:'半導体工場', kana:'はんどうたいこうじょう'},
+  {jp:'自動運転', kana:'じどううんてん'},
+  {jp:'ドローン配送', kana:'どろーんはいそう'},
+  {jp:'脱炭素', kana:'だつたんそ'},
+  {jp:'再生可能エネルギー', kana:'さいせいかのうえねるぎー'},
+  {jp:'フードロス削減', kana:'ふーどろすさくげん'},
+  {jp:'リユースショップ', kana:'りゆーすしょっぷ'},
+  {jp:'アップサイクル', kana:'あっぷさいくる'},
+  {jp:'民泊', kana:'みんぱく'},
+  {jp:'インバウンド', kana:'いんばうんど'},
+  {jp:'多言語対応', kana:'たげんごたいおう'},
+  {jp:'翻訳アプリ', kana:'ほんやくあぷり'},
+  {jp:'電子チケット', kana:'でんしちけっと'},
+  {jp:'フェス飯', kana:'ふぇすめし'},
+  {jp:'映画レビュー', kana:'えいがれびゅー'},
+  {jp:'ドラマ考察', kana:'どらまこうさつ'},
+  {jp:'プレイリスト', kana:'ぷれいりすと'},
+  {jp:'ポッドキャスト', kana:'ぽっどきゃすと'},
+  {jp:'ボードゲーム', kana:'ぼーどげーむ'},
+  {jp:'カードゲーム', kana:'かーどげーむ'},
+  {jp:'eスポーツ', kana:'いーすぽーつ'},
+  {jp:'スケートボード', kana:'すけーとぼーど'},
+  {jp:'ブレイキン', kana:'ぶれいきん'},
+  {jp:'女子バレー', kana:'じょしばれー'},
+  {jp:'駅伝', kana:'えきでん'},
+  {jp:'大相撲', kana:'おおずもう'},
+  {jp:'将棋盤', kana:'しょうぎばん'},
+  {jp:'囲碁教室', kana:'いごきょうしつ'},
+  {jp:'俳句大会', kana:'はいくたいかい'},
+  {jp:'短歌ブーム', kana:'たんかぶーむ'},
+  {jp:'書店巡り', kana:'しょてんめぐり'},
+  {jp:'図書館カード', kana:'としょかんかーど'},
+  {jp:'読書記録', kana:'どくしょきろく'},
+  {jp:'手帳時間', kana:'てちょうじかん'},
+  {jp:'万年筆', kana:'まんねんひつ'},
+  {jp:'シール帳', kana:'しーるちょう'},
+  {jp:'ぬか漬け', kana:'ぬかづけ'},
+  {jp:'具だくさん味噌汁', kana:'ぐだくさんみそしる'},
+  {jp:'出汁パック', kana:'だしぱっく'},
+  {jp:'冷凍弁当', kana:'れいとうべんとう'},
+  {jp:'作り置き', kana:'つくりおき'},
+  {jp:'時短レシピ', kana:'じたんれしぴ'},
+  {jp:'家計簿アプリ', kana:'かけいぼあぷり'},
+  {jp:'ポイント還元', kana:'ぽいんとかんげん'},
+  {jp:'新NISA', kana:'しんにーさ'},
+  {jp:'ふるさと納税', kana:'ふるさとのうぜい'},
+  {jp:'防犯カメラ', kana:'ぼうはんかめら'},
+  {jp:'見守りサービス', kana:'みまもりさーびす'},
+  {jp:'宅配ボックス', kana:'たくはいぼっくす'},
+  {jp:'電動キックボード', kana:'でんどうきっくぼーど'},
+  {jp:'カーシェア', kana:'かーしぇあ'},
+  {jp:'シェアサイクル', kana:'しぇあさいくる'},
+  {jp:'朝の市場で新鮮な魚を選びます', kana:'あさのいちばでしんせんなさかなをえらびます', kind:'sentence'},
+  {jp:'店員さんが湯のみを静かに置きます', kana:'てんいんさんがゆのみをしずかにおきます', kind:'sentence'},
+  {jp:'醤油皿に少しだけわさびを溶かします', kana:'しょうゆざらにすこしだけわさびをとかします', kind:'sentence'},
+  {jp:'レーンの奥から次の皿が流れてきます', kana:'れーんのおくからつぎのさらがながれてきます', kind:'sentence'},
+  {jp:'家族で今日のおすすめを相談します', kana:'かぞくできょうのおすすめをそうだんします', kind:'sentence'},
+  {jp:'旅行先の駅弁を車窓の景色と味わいます', kana:'りょこうさきのえきべんをしゃそうのけしきとあじわいます', kind:'sentence'},
+  {jp:'推し活の写真をきれいに並べて撮ります', kana:'おしかつのしゃしんをきれいにならべてとります', kind:'sentence'},
+  {jp:'短い動画でも言葉のテンポが大切です', kana:'みじかいどうがでもことばのてんぽがたいせつです', kind:'sentence'},
+  {jp:'生成AIに旅程表の下書きを頼みます', kana:'せいせいえーあいにりょていひょうのしたがきをたのみます', kind:'sentence'},
+  {jp:'オンライン診療の予約時間を確認します', kana:'おんらいんしんりょうのよやくじかんをかくにんします', kind:'sentence'},
+  {jp:'熱中症対策で水分をこまめに取ります', kana:'ねっちゅうしょうたいさくですいぶんをこまめにとります', kind:'sentence'},
+  {jp:'線状降水帯の情報をニュースで確認します', kana:'せんじょうこうすいたいのじょうほうをにゅーすでかくにんします', kind:'sentence'},
+  {jp:'道の駅で地元の野菜を買いました', kana:'みちのえきでじもとのやさいをかいました', kind:'sentence'},
+  {jp:'古民家カフェで静かな午後を過ごします', kana:'こみんかかふぇでしずかなごごをすごします', kind:'sentence'},
+  {jp:'星空観察の前に天気予報を調べます', kana:'ほしぞらかんさつのまえにてんきよほうをしらべます', kind:'sentence'},
+  {jp:'半導体工場の見学で技術の進歩を学びます', kana:'はんどうたいこうじょうのけんがくでぎじゅつのしんぽをまなびます', kind:'sentence'},
+  {jp:'フードロス削減のため食材を使い切ります', kana:'ふーどろすさくげんのためしょくざいをつかいきります', kind:'sentence'},
+  {jp:'翻訳アプリで海外の案内板を読みます', kana:'ほんやくあぷりでかいがいのあんないばんをよみます', kind:'sentence'},
+  {jp:'映画レビューを読んで週末の予定を決めます', kana:'えいがれびゅーをよんでしゅうまつのよていをきめます', kind:'sentence'},
+  {jp:'読書記録をつけると本の記憶が残ります', kana:'どくしょきろくをつけるとほんのきおくがのこります', kind:'sentence'},
+  {jp:'時短レシピで夕食の準備を早めます', kana:'じたんれしぴでゆうしょくのじゅんびをはやめます', kind:'sentence'},
+  {jp:'宅配ボックスに荷物が届いていました', kana:'たくはいぼっくすににもつがとどいていました', kind:'sentence'},
+  {jp:'シェアサイクルで川沿いを走ります', kana:'しぇあさいくるでかわぞいをはしります', kind:'sentence'},
+  {jp:'めじるしアクセサリーを傘につけました', kana:'めじるしあくせさりーをかさにつけました', kind:'sentence'},
+  {jp:'ビジュいい写真を友達に送ります', kana:'びじゅいいしゃしんをともだちにおくります', kind:'sentence'}
+];
+const KANA_MAP = {
+  'あ':['a'], 'い':['i'], 'う':['u'], 'え':['e'], 'お':['o'],
+  'か':['ka'], 'き':['ki'], 'く':['ku'], 'け':['ke'], 'こ':['ko'],
+  'さ':['sa'], 'し':['shi','si'], 'す':['su'], 'せ':['se'], 'そ':['so'],
+  'た':['ta'], 'ち':['chi','ti'], 'つ':['tsu','tu'], 'て':['te'], 'と':['to'],
+  'な':['na'], 'に':['ni'], 'ぬ':['nu'], 'ね':['ne'], 'の':['no'],
+  'は':['ha'], 'ひ':['hi'], 'ふ':['fu','hu'], 'へ':['he'], 'ほ':['ho'],
+  'ま':['ma'], 'み':['mi'], 'む':['mu'], 'め':['me'], 'も':['mo'],
+  'や':['ya'], 'ゆ':['yu'], 'よ':['yo'],
+  'ら':['ra'], 'り':['ri'], 'る':['ru'], 'れ':['re'], 'ろ':['ro'],
+  'わ':['wa'], 'を':['wo'],
+  'が':['ga'], 'ぎ':['gi'], 'ぐ':['gu'], 'げ':['ge'], 'ご':['go'],
+  'ざ':['za'], 'じ':['ji','zi'], 'ず':['zu'], 'ぜ':['ze'], 'ぞ':['zo'],
+  'だ':['da'], 'ぢ':['ji','di'], 'づ':['zu','du'], 'で':['de'], 'ど':['do'],
+  'ば':['ba'], 'び':['bi'], 'ぶ':['bu'], 'べ':['be'], 'ぼ':['bo'],
+  'ぱ':['pa'], 'ぴ':['pi'], 'ぷ':['pu'], 'ぺ':['pe'], 'ぽ':['po'],
+  'ぁ':['xa','la'], 'ぃ':['xi','li'], 'ぅ':['xu','lu'], 'ぇ':['xe','le'], 'ぉ':['xo','lo'],
+  'ゃ':['xya','lya'], 'ゅ':['xyu','lyu'], 'ょ':['xyo','lyo'],
+  'ゔ':['vu']
+};
+
+const COMBO_MAP = {
+  'きゃ':['kya'], 'きゅ':['kyu'], 'きょ':['kyo'],
+  'しゃ':['sha','sya'], 'しゅ':['shu','syu'], 'しょ':['sho','syo'],
+  'ちゃ':['cha','tya','cya'], 'ちゅ':['chu','tyu','cyu'], 'ちょ':['cho','tyo','cyo'],
+  'にゃ':['nya'], 'にゅ':['nyu'], 'にょ':['nyo'],
+  'ひゃ':['hya'], 'ひゅ':['hyu'], 'ひょ':['hyo'],
+  'みゃ':['mya'], 'みゅ':['myu'], 'みょ':['myo'],
+  'りゃ':['rya'], 'りゅ':['ryu'], 'りょ':['ryo'],
+  'ぎゃ':['gya'], 'ぎゅ':['gyu'], 'ぎょ':['gyo'],
+  'じゃ':['ja','jya','zya'], 'じゅ':['ju','jyu','zyu'], 'じょ':['jo','jyo','zyo'],
+  'ぢゃ':['ja','dya'], 'ぢゅ':['ju','dyu'], 'ぢょ':['jo','dyo'],
+  'びゃ':['bya'], 'びゅ':['byu'], 'びょ':['byo'],
+  'ぴゃ':['pya'], 'ぴゅ':['pyu'], 'ぴょ':['pyo'],
+  'ふぁ':['fa'], 'ふぃ':['fi'], 'ふぇ':['fe'], 'ふぉ':['fo'], 'ふゅ':['fyu'],
+  'うぁ':['wha'], 'うぃ':['wi','whi'], 'うぇ':['we','whe'], 'うぉ':['wo','who'],
+  'いぇ':['ye'],
+  'きぇ':['kye'], 'ぎぇ':['gye'],
+  'しぇ':['she','sye'], 'じぇ':['je','jye','zye'],
+  'ちぇ':['che','tye','cye'],
+  'にぇ':['nye'], 'ひぇ':['hye'], 'びぇ':['bye'], 'ぴぇ':['pye'],
+  'みぇ':['mye'], 'りぇ':['rye'],
+  'てぃ':['thi'], 'でぃ':['dhi'],
+  'とぅ':['twu'], 'どぅ':['dwu'],
+  'くぁ':['qa','kwa','qwa'], 'くぃ':['qi','kwi','qwi'], 'くぇ':['qe','kwe','qwe'], 'くぉ':['qo','kwo','qwo'],
+  'ぐぁ':['gwa'], 'ぐぃ':['gwi'], 'ぐぇ':['gwe'], 'ぐぉ':['gwo'],
+  'ゔぁ':['va'], 'ゔぃ':['vi'], 'ゔぇ':['ve'], 'ゔぉ':['vo'], 'ゔゅ':['vyu']
+};
+
+function combinePrefixes(prefixes, suffixes) {
+  const out = [];
+  for (let i = 0; i < prefixes.length; i++) {
+    for (let j = 0; j < suffixes.length; j++) out.push(prefixes[i] + suffixes[j]);
+  }
+  return out.slice(0, 180);
+}
+
+function firstConsonant(text) {
+  if (!text) return '';
+  const c = text.charAt(0);
+  if ('aeioun'.indexOf(c) >= 0) return '';
+  return c;
+}
+
+function kanaToCandidates(kana) {
+  const memo = {};
+  function rec(index) {
+    if (index >= kana.length) return [''];
+    if (memo[index]) return memo[index];
+    const ch = kana.charAt(index);
+    if (ch === 'っ') {
+      const rest = rec(index + 1);
+      const doubled = [];
+      for (let i = 0; i < rest.length; i++) {
+        const fc = firstConsonant(rest[i]);
+        if (fc) doubled.push(fc + rest[i]);
+      }
+      memo[index] = doubled.length ? doubled.slice(0, 180) : rest;
+      return memo[index];
+    }
+    if (ch === 'ん') {
+      const rest = rec(index + 1);
+      memo[index] = combinePrefixes(['n','nn','m'], rest);
+      return memo[index];
+    }
+    if (ch === 'ー') {
+      const rest = rec(index + 1);
+      memo[index] = combinePrefixes(['-'], rest);
+      return memo[index];
+    }
+    const two = kana.slice(index, index + 2);
+    if (COMBO_MAP[two]) {
+      memo[index] = combinePrefixes(COMBO_MAP[two], rec(index + 2));
+      return memo[index];
+    }
+    const opts = KANA_MAP[ch] || [ch];
+    memo[index] = combinePrefixes(opts, rec(index + 1));
+    return memo[index];
+  }
+  const unique = Array.from(new Set(rec(0)));
+  const candidateSet = new Set(unique);
+  function guideScore(value) {
+    let penalty = 0;
+    for (let i = 0; i < value.length; i++) {
+      if (value.charAt(i) === 'm') {
+        const nValue = value.slice(0, i) + 'n' + value.slice(i + 1);
+        if (candidateSet.has(nValue)) penalty += 100;
+      }
+    }
+    if (value.indexOf('nn') >= 0) penalty += 6;
+    if (/[xl]/.test(value)) penalty += 3;
+    return penalty;
+  }
+  return unique.sort(function(a, b) {
+    return guideScore(a) - guideScore(b) || a.length - b.length || a.localeCompare(b);
+  });
+}
+
+const $ = function(id) { return document.getElementById(id); };
+const shell = $('gameShell');
+const plate = $('plate');
+const hitFlash = $('hitFlash');
+const bubble = $('comboBubble');
+
+let state = 'menu';
+let current = null;
+let candidates = [];
+let guideRoman = '';
+let currentInput = '';
+let score = 0;
+let clearCount = 0;
+let missCount = 0;
+let wrongCount = 0;
+let correctKeys = 0;
+let totalKeys = 0;
+let combo = 0;
+let maxCombo = 0;
+let startTime = 0;
+let endTime = 0;
+let lastFrame = 0;
+let wordStart = 0;
+let wordLimit = 6;
+let wordLocked = false;
+let recentClears = [];
+let usedIndexes = [];
+let rafId = null;
+let bestScore = Number(storageGet('sushiTypingBest') || '0') || 0;
+$('bestValue').textContent = String(bestScore);
+
+const fishColors = [
+  ['#ff9a78','#e84f38'], ['#ffb85f','#f07a2a'], ['#ffdf9e','#d49a3b'], ['#fff4df','#d8b36a'],
+  ['#ff7f9e','#d63d5b'], ['#f7f1e4','#9f7c54'], ['#e6edf3','#7792a6'], ['#fbd5bd','#df7245']
+];
+const sushiClasses = ['sushi-nigiri','sushi-ebi','sushi-gunkan','sushi-tamago','sushi-hotate','sushi-ika'];
+
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = a[i];
+    a[i] = a[j];
+    a[j] = tmp;
+  }
+  return a;
+}
+
+function getTypeKana(word) {
+  return word.typeKana || word.kana;
+}
+
+function getDisplayKana(word) {
+  return word.displayKana || word.typeKana || word.kana;
+}
+
+function classifyWord(word) {
+  if (word.kind === 'sentence') return 'sentence';
+  const typeKana = getTypeKana(word);
+  const sample = kanaToCandidates(typeKana)[0] || typeKana;
+  const len = sample.length;
+  if (len <= 7) return 'short';
+  if (len <= 13) return 'medium';
+  return 'long';
+}
+
+const WORD_META = WORDS.map(function(word, idx) {
+  return { idx: idx, bucket: classifyWord(word) };
+});
+const WORD_BUCKETS = {
+  short: WORD_META.filter(function(m) { return m.bucket === 'short'; }).map(function(m) { return m.idx; }),
+  medium: WORD_META.filter(function(m) { return m.bucket === 'medium'; }).map(function(m) { return m.idx; }),
+  long: WORD_META.filter(function(m) { return m.bucket === 'long'; }).map(function(m) { return m.idx; }),
+  sentence: WORD_META.filter(function(m) { return m.bucket === 'sentence'; }).map(function(m) { return m.idx; })
+};
+let wordDecks = { short: [], medium: [], long: [], sentence: [], all: [] };
+let recentIndexes = [];
+let lastBucket = '';
+
+function refillDeck(bucket) {
+  const base = bucket === 'all'
+    ? WORD_META.map(function(m) { return m.idx; })
+    : (WORD_BUCKETS[bucket] || []).slice();
+  let pool = base.filter(function(idx) { return recentIndexes.indexOf(idx) < 0; });
+  if (!pool.length) pool = base.slice();
+  wordDecks[bucket] = shuffleArray(pool);
+}
+
+function drawFromBucket(bucket) {
+  if (!wordDecks[bucket] || !wordDecks[bucket].length) refillDeck(bucket);
+  if (!wordDecks[bucket] || !wordDecks[bucket].length) return null;
+  return wordDecks[bucket].shift();
+}
+
+function randomItem(list) {
+  if (!list || !list.length) return null;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function drawFreshIndex(bucket) {
+  const base = bucket === 'all'
+    ? WORD_META.map(function(m) { return m.idx; })
+    : (WORD_BUCKETS[bucket] || []).slice();
+  let pool = base.filter(function(idx) {
+    return recentIndexes.indexOf(idx) < 0 && usedIndexes.indexOf(idx) < 0;
+  });
+  if (!pool.length) {
+    pool = WORD_META
+      .map(function(m) { return m.idx; })
+      .filter(function(idx) { return recentIndexes.indexOf(idx) < 0 && usedIndexes.indexOf(idx) < 0; });
+  }
+  if (!pool.length) {
+    pool = base.filter(function(idx) { return recentIndexes.indexOf(idx) < 0; });
+  }
+  if (!pool.length) {
+    pool = WORD_META
+      .map(function(m) { return m.idx; })
+      .filter(function(idx) { return recentIndexes.indexOf(idx) < 0; });
+  }
+  if (!pool.length) pool = base.length ? base : WORD_META.map(function(m) { return m.idx; });
+  return randomItem(pool);
+}
+
+function chooseWeightedBucket() {
+  const elapsedRatio = state === 'playing'
+    ? Math.min(1, Math.max(0, (Date.now() - startTime) / Math.max(1, (endTime - startTime))))
+    : 0;
+  let weights;
+  if (elapsedRatio < 0.28) {
+    weights = { short: 28, medium: 30, long: 24, sentence: 18 };
+  } else if (elapsedRatio < 0.68) {
+    weights = { short: 22, medium: 30, long: 27, sentence: 21 };
+  } else {
+    weights = { short: 18, medium: 26, long: 29, sentence: 27 };
+  }
+  if (lastBucket && weights[lastBucket]) weights[lastBucket] *= 0.45;
+  const total = weights.short + weights.medium + weights.long + weights.sentence;
+  let r = Math.random() * total;
+  const keys = ['short', 'medium', 'long', 'sentence'];
+  for (let i = 0; i < keys.length; i++) {
+    r -= weights[keys[i]];
+    if (r <= 0) return keys[i];
+  }
+  return 'medium';
+}
+
+function chooseWord() {
+  const bucket = chooseWeightedBucket();
+  lastBucket = bucket;
+  let idx = drawFreshIndex(bucket);
+  if (idx === null || typeof idx === 'undefined') idx = drawFreshIndex('all');
+  if (idx === null || typeof idx === 'undefined') idx = drawFromBucket(bucket);
+  if (idx === null || typeof idx === 'undefined') idx = drawFromBucket('all');
+  if (idx === null || typeof idx === 'undefined') idx = Math.floor(Math.random() * WORDS.length);
+  recentIndexes.push(idx);
+  const recentLimit = Math.max(80, Math.min(140, Math.floor(WORDS.length * 0.24)));
+  while (recentIndexes.length > recentLimit) recentIndexes.shift();
+  usedIndexes.push(idx);
+  if (usedIndexes.length > Math.floor(WORDS.length * 0.82)) usedIndexes = usedIndexes.slice(-Math.floor(WORDS.length * 0.28));
+  return WORDS[idx];
+}
+
+function compatibleCandidates(input) {
+  return candidates.filter(function(c) { return c.indexOf(input) === 0; });
+}
+
+function viewCandidate() {
+  return guideRoman || candidates[0] || '';
+}
+
+function renderRoman() {
+  const roman = viewCandidate();
+  const typed = currentInput;
+  const rd = $('romanDisplay');
+  rd.classList.toggle('long', roman.length > 38);
+  let cols = 28;
+  if (roman.length > 70) { rd.style.fontSize = '17px'; rd.style.lineHeight = '1.18'; cols = 48; }
+  else if (roman.length > 58) { rd.style.fontSize = '19px'; rd.style.lineHeight = '1.16'; cols = 44; }
+  else if (roman.length > 46) { rd.style.fontSize = '22px'; rd.style.lineHeight = '1.14'; cols = 40; }
+  else if (roman.length > 38) { rd.style.fontSize = '25px'; rd.style.lineHeight = '1.12'; cols = 36; }
+  else if (roman.length > 30) { rd.style.fontSize = '30px'; rd.style.lineHeight = '1.08'; cols = 32; }
+  else if (roman.length > 22) { rd.style.fontSize = '35px'; rd.style.lineHeight = '1.08'; cols = 28; }
+  else { rd.style.fontSize = '42px'; rd.style.lineHeight = '1.08'; cols = Math.max(roman.length, 1); }
+  rd.style.letterSpacing = '0';
+  rd.style.setProperty('--roman-cols', String(cols));
+  let html = '';
+  for (let i = 0; i < roman.length; i++) {
+    const cls = i < typed.length ? 'typed' : (i === typed.length ? 'next' : 'rest');
+    html += '<span class="char ' + cls + '">' + escapeHtml(roman.charAt(i)) + '</span>';
+  }
+  rd.innerHTML = html || '<span class="char rest"></span>';
+  const denom = Math.max(1, roman.length);
+  $('inputProgress').style.width = Math.min(100, Math.round((typed.length / denom) * 100)) + '%';
+}
+
+function chooseSushiStyle(word) {
+  const name = word.jp || '';
+  if (/海老|甘海老|えび|エビ/.test(name)) return { cls: 'sushi-ebi', colors: ['#ffd0a8', '#ef6b3f'] };
+  if (/雲丹|いくら|軍艦|蟹|かに/.test(name)) return { cls: 'sushi-gunkan', colors: ['#ffbd45', '#f06b35'] };
+  if (/玉子|卵|たまご/.test(name)) return { cls: 'sushi-tamago', colors: ['#fff3a4', '#e2a72f'] };
+  if (/帆立|ほたて|貝|赤貝|つぶ貝/.test(name)) return { cls: 'sushi-hotate', colors: ['#fff5df', '#d5a36c'] };
+  if (/烏賊|いか|イカ/.test(name)) return { cls: 'sushi-ika', colors: ['#ffffff', '#dce7eb'] };
+  const variants = ['sushi-nigiri','sushi-ebi','sushi-gunkan','sushi-tamago','sushi-hotate','sushi-ika'];
+  return { cls: randomItem(variants), colors: randomItem(fishColors) };
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"]/g, function(ch) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[ch];
+  });
+}
+
+function fitPromptText(word, roman) {
+  const jpLen = Array.from(word.jp).length;
+  const kanaLen = Array.from(getDisplayKana(word)).length;
+  const jp = $('jpWord');
+  const kana = $('kanaWord');
+  if (jpLen > 20) jp.style.fontSize = '23px';
+  else if (jpLen > 15) jp.style.fontSize = '27px';
+  else if (jpLen > 10) jp.style.fontSize = '32px';
+  else if (jpLen > 6) jp.style.fontSize = '38px';
+  else jp.style.fontSize = '44px';
+  jp.style.letterSpacing = '0';
+  if (kanaLen > 28) kana.style.fontSize = '13px';
+  else if (kanaLen > 22) kana.style.fontSize = '14px';
+  else if (kanaLen > 16) kana.style.fontSize = '16px';
+  else kana.style.fontSize = '19px';
+  kana.style.letterSpacing = '0';
+}
+
+function newWord() {
+  current = chooseWord();
+  candidates = kanaToCandidates(getTypeKana(current));
+  guideRoman = candidates[0] || '';
+  currentInput = '';
+  wordLocked = false;
+  const shortest = candidates[0] || '';
+  const course = COURSE;
+  const elapsedRatio = Math.min(1, (Date.now() - startTime) / Math.max(1, (endTime - startTime)));
+  const pressure = 1 + elapsedRatio * 0.42 + Math.min(0.22, clearCount * 0.005);
+  const sentenceBonus = current.kind === 'sentence' ? 1.4 : 0;
+  const lengthRate = current.kind === 'sentence' ? 0.43 : 0.37;
+  wordLimit = Math.max(current.kind === 'sentence' ? 4.6 : 2.55, (3.35 + sentenceBonus + shortest.length * lengthRate) / (course.speed * pressure));
+  wordStart = performance.now();
+  $('jpWord').textContent = current.jp;
+  $('kanaWord').textContent = getDisplayKana(current);
+  fitPromptText(current, shortest);
+  $('plateName').textContent = current.kind === 'sentence' ? '文章' : current.jp;
+  const sushiStyle = chooseSushiStyle(current);
+  const c = sushiStyle.colors || randomItem(fishColors);
+  plate.style.setProperty('--fish1', c[0]);
+  plate.style.setProperty('--fish2', c[1]);
+  plate.classList.remove('clear', 'miss');
+  sushiClasses.forEach(function(cls) { plate.classList.remove(cls); });
+  plate.classList.add(sushiStyle.cls || 'sushi-nigiri');
+  renderRoman();
+  updatePlatePosition(0);
+}
+
+function updatePlatePosition(progress) {
+  const startX = 870;
+  const endX = 82;
+  const x = startX + (endX - startX) * progress;
+  plate.style.setProperty('--px', x + 'px');
+  plate.style.transform = 'translate(' + x + 'px, 0)';
+  shell.classList.toggle('word-danger', state === 'playing' && !wordLocked && progress > 0.74);
+}
+
+function updateStats() {
+  const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+  $('timeValue').textContent = String(remaining);
+  shell.classList.toggle('time-low', state === 'playing' && remaining <= 10);
+  $('scoreValue').textContent = String(score);
+  $('comboValue').textContent = String(combo);
+  $('clearValue').textContent = String(clearCount);
+  $('missValue').textContent = String(missCount);
+  const attempts = correctKeys + wrongCount;
+  const acc = attempts ? (correctKeys / attempts) * 100 : 100;
+  $('accValue').textContent = formatOne(acc) + '%';
+  const elapsedMin = Math.max(0.01, (Date.now() - startTime) / 60000);
+  $('speedValue').textContent = formatOne(correctKeys / elapsedMin);
+}
+
+function formatOne(value) {
+  return (Math.round((Number(value) || 0) * 10) / 10).toFixed(1);
+}
+
+const bubbleClasses = ['bubble-training','bubble-kappa','bubble-tamago','bubble-ebi','bubble-akami','bubble-chutoro','bubble-otoro','bubble-combo','bubble-miss'];
+function getWordGradeClass(grade) {
+  if (grade === '大トロ級') return 'bubble-otoro';
+  if (grade === '中トロ級') return 'bubble-chutoro';
+  if (grade === '赤身級') return 'bubble-akami';
+  if (grade === '海老級') return 'bubble-ebi';
+  if (grade === '玉子級') return 'bubble-tamago';
+  if (grade === 'かっぱ巻級') return 'bubble-kappa';
+  return 'bubble-training';
+}
+function getResultRankClass(rank) {
+  return 'rank-' + String(rank).toLowerCase().replace(/\+/g, 'plus');
+}
+function showBubble(text, type) {
+  bubbleClasses.forEach(function(cls) { bubble.classList.remove(cls); });
+  if (!text || !String(text).trim()) {
+    bubble.classList.remove('show');
+    bubble.textContent = '';
+    return;
+  }
+  if (type) bubble.classList.add(type);
+  bubble.textContent = text;
+  bubble.classList.remove('show');
+  void bubble.offsetWidth;
+  bubble.classList.add('show');
+}
+
+function flashAtPlate() {
+  const shellRect = shell.getBoundingClientRect();
+  const plateRect = plate.getBoundingClientRect();
+  hitFlash.style.left = (plateRect.left - shellRect.left + plateRect.width / 2) + 'px';
+  hitFlash.style.top = (plateRect.top - shellRect.top + plateRect.height / 2) + 'px';
+  hitFlash.classList.remove('show');
+  void hitFlash.offsetWidth;
+  hitFlash.classList.add('show');
+}
+
+function shake(type) {
+  shell.classList.remove('shake-small', 'shake-big');
+  void shell.offsetWidth;
+  shell.classList.add(type === 'big' ? 'shake-big' : 'shake-small');
+}
+
+function completeWord() {
+  if (wordLocked) return;
+  wordLocked = true;
+  shell.classList.remove('word-danger');
+  const elapsed = (performance.now() - wordStart) / 1000;
+  const typedLen = viewCandidate().length || currentInput.length;
+  const wordKpm = Math.round((typedLen / Math.max(0.12, elapsed)) * 60);
+  const remainBonus = Math.max(0, Math.round((wordLimit - elapsed) * 80));
+  const lenBonus = typedLen * 12;
+  combo += 1;
+  maxCombo = Math.max(maxCombo, combo);
+  const comboBonus = Math.min(500, combo * 12);
+  const gained = lenBonus + remainBonus + comboBonus;
+  score += gained;
+  clearCount += 1;
+  recentClears.unshift(current.jp);
+  recentClears = recentClears.slice(0, 12);
+  plate.classList.remove('clear');
+  void plate.offsetWidth;
+  plate.classList.add('clear');
+  flashAtPlate();
+  playClearSound(combo);
+  if (combo > 0 && combo % 5 === 0) {
+    showBubble(combo + ' COMBO +' + gained, 'bubble-combo');
+  } else {
+    const grade = getWordGrade(wordKpm);
+    showBubble(grade + ' / ' + wordKpm + ' key/min / +' + gained, getWordGradeClass(grade));
+  }
+  updateStats();
+  setTimeout(function() {
+    if (state === 'playing') newWord();
+  }, 150);
+}
+
+function getWordGrade(wordKpm) {
+  if (wordKpm >= 400) return '大トロ級';
+  if (wordKpm >= 350) return '中トロ級';
+  if (wordKpm >= 310) return '赤身級';
+  if (wordKpm >= 270) return '海老級';
+  if (wordKpm >= 230) return '玉子級';
+  if (wordKpm >= 190) return 'かっぱ巻級';
+  return '修行中';
+}
+
+function missWord() {
+  if (wordLocked) return;
+  wordLocked = true;
+  shell.classList.remove('word-danger');
+  missCount += 1;
+  combo = 0;
+  currentInput = '';
+  plate.classList.remove('miss');
+  void plate.offsetWidth;
+  plate.classList.add('miss');
+  playMissSound();
+  shake('big');
+  showBubble('MISS / 皿落ち', 'bubble-miss');
+  updateStats();
+  setTimeout(function() {
+    if (state === 'playing') newWord();
+  }, 620);
+}
+
+function handleKey(e) {
+  document.body.focus();
+  if (state === 'menu' && (e.key === 'Enter' || e.key === ' ' || e.code === 'Space')) {
+    e.preventDefault();
+    startCountdown();
+    return;
+  }
+  if (state === 'result' && (e.key === 'Enter' || e.key === ' ' || e.code === 'Space')) {
+    e.preventDefault();
+    startCountdown();
+    return;
+  }
+  if (state !== 'playing' || wordLocked) return;
+  const k = e.key;
+  if (k === 'Backspace') {
+    e.preventDefault();
+    if (currentInput.length) currentInput = currentInput.slice(0, -1);
+    renderRoman();
+    return;
+  }
+  if (k.length !== 1) return;
+  const ch = k.toLowerCase();
+  if (!/^[a-z\-']$/.test(ch)) return;
+  e.preventDefault();
+  totalKeys += 1;
+  const trial = currentInput + ch;
+  if (compatibleCandidates(trial).length > 0) {
+    currentInput = trial;
+    correctKeys += 1;
+    playKeySound();
+    renderRoman();
+    if (candidates.indexOf(currentInput) >= 0) completeWord();
+  } else {
+    wrongCount += 1;
+    combo = 0;
+    playWrongSound();
+    shake('small');
+    updateStats();
+  }
+}
+
+function gameLoop(now) {
+  if (state !== 'playing') return;
+  if (!lastFrame) lastFrame = now;
+  lastFrame = now;
+  const timeLeft = endTime - Date.now();
+  if (timeLeft <= 0) {
+    finishGame();
+    return;
+  }
+  if (!wordLocked) {
+    const progress = Math.min(1, (now - wordStart) / (wordLimit * 1000));
+    updatePlatePosition(progress);
+    if (progress >= 1) missWord();
+  }
+  updateStats();
+  rafId = requestAnimationFrame(gameLoop);
+}
+
+function startCountdown() {
+  initAudioOnGesture();
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  state = 'countdown';
+  wordLocked = true;
+  shell.classList.remove('hidden-start');
+  shell.classList.remove('word-danger', 'time-low');
+  $('startOverlay').classList.add('hidden');
+  $('resultOverlay').classList.add('hidden');
+  $('countdownOverlay').classList.remove('hidden');
+  let count = 3;
+  function paintCount(text) {
+    const el = $('countdownValue');
+    el.textContent = text;
+    el.classList.remove('countdown-number');
+    void el.offsetWidth;
+    el.classList.add('countdown-number');
+  }
+  paintCount(String(count));
+  tone(660, 0.10, 'triangle', 0.024);
+  countdownTimer = setInterval(function() {
+    count -= 1;
+    if (count > 0) {
+      paintCount(String(count));
+      tone(660 + (3 - count) * 80, 0.10, 'triangle', 0.024);
+      return;
+    }
+    if (count === 0) {
+      paintCount('GO');
+      tone(1046, 0.18, 'triangle', 0.032);
+      return;
+    }
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+    $('countdownOverlay').classList.add('hidden');
+    beginGame();
+  }, 820);
+}
+
+function beginGame() {
+  initAudioOnGesture();
+  shell.classList.remove('hidden-start');
+  shell.classList.remove('word-danger', 'time-low');
+  $('startOverlay').classList.add('hidden');
+  $('resultOverlay').classList.add('hidden');
+  $('countdownOverlay').classList.add('hidden');
+  state = 'playing';
+  score = 0;
+  clearCount = 0;
+  missCount = 0;
+  wrongCount = 0;
+  correctKeys = 0;
+  totalKeys = 0;
+  combo = 0;
+  maxCombo = 0;
+  recentClears = [];
+  usedIndexes = [];
+  recentIndexes = [];
+  lastBucket = '';
+  wordDecks = { short: [], medium: [], long: [], sentence: [], all: [] };
+  const now = Date.now();
+  startTime = now;
+  endTime = now + COURSE.time * 1000;
+  lastFrame = 0;
+  newWord();
+  updateStats();
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(gameLoop);
+}
+
+function finishGame() {
+  state = 'result';
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  shell.classList.remove('word-danger', 'time-low');
+  const attempts = correctKeys + wrongCount;
+  const acc = attempts ? (correctKeys / attempts) * 100 : 100;
+  const elapsedMin = COURSE.time / 60;
+  const speed = correctKeys / Math.max(0.01, elapsedMin);
+  if (score > bestScore) {
+    bestScore = score;
+    storageSet('sushiTypingBest', String(bestScore));
+  }
+  $('bestValue').textContent = String(bestScore);
+  const rank = getRank(score, speed, acc);
+  const rankEl = $('rankValue');
+  rankEl.textContent = rank.rank;
+  rankEl.className = 'rank ' + getResultRankClass(rank.rank);
+  $('resultMessage').textContent = rank.msg;
+  $('rScore').textContent = String(score);
+  $('rClear').textContent = String(clearCount);
+  $('rAcc').textContent = formatOne(acc) + '%';
+  $('rSpeed').textContent = formatOne(speed);
+  $('rCombo').textContent = String(maxCombo);
+  $('rMiss').textContent = String(missCount);
+  $('rWrong').textContent = String(wrongCount);
+  $('rBest').textContent = String(bestScore);
+  $('resultOverlay').classList.remove('hidden');
+  playResultSound(rank.rank);
+}
+
+function getRank(sc, speed, acc) {
+  const table = [
+    {rank:'SSS', minSpeed:400, minAcc:97, msg:'SSSランク。速さも正確さも板前級です。'},
+    {rank:'SS+', minSpeed:385, minAcc:97, msg:'SS+ランク。高速なのに手元がぶれていません。'},
+    {rank:'SS', minSpeed:365, minAcc:96, msg:'SSランク。長いお題でもかなり安定しています。'},
+    {rank:'S+', minSpeed:345, minAcc:96, msg:'S+ランク。上級者らしい気持ちいい打鍵です。'},
+    {rank:'S', minSpeed:320, minAcc:95, msg:'Sランク。320 KEY/MIN・正確性95%をクリアしています。'},
+    {rank:'A+', minSpeed:270, minAcc:93, msg:'A+ランク。十分速く、正確さも頼れます。'},
+    {rank:'A', minSpeed:220, minAcc:90, msg:'Aランク。実用域をしっかり超えています。'},
+    {rank:'B+', minSpeed:190, minAcc:88, msg:'B+ランク。リズムよく入力できています。'},
+    {rank:'B', minSpeed:160, minAcc:85, msg:'Bランク。基本の入力は安定しています。'},
+    {rank:'C+', minSpeed:130, minAcc:82, msg:'C+ランク。正確さを保つほど伸びます。'},
+    {rank:'C', minSpeed:105, minAcc:78, msg:'Cランク。キーの位置に慣れてきています。'},
+    {rank:'D', minSpeed:80, minAcc:70, msg:'Dランク。短いお題でテンポを作りましょう。'},
+    {rank:'E', minSpeed:50, minAcc:60, msg:'Eランク。まずは一文字ずつ確実に。'},
+    {rank:'F', minSpeed:0, minAcc:0, msg:'Fランク。落ち着いて、次の一皿からです。'}
+  ];
+  for (let i = 0; i < table.length; i++) {
+    const r = table[i];
+    if (speed >= r.minSpeed && acc >= r.minAcc) {
+      return {rank: r.rank, msg: r.msg};
+    }
+  }
+  return {rank:'F', msg:'Fランク。落ち着いて、次の一皿からです。'};
+}
+
+function playResultSound(rank) {
+  if (!sfxEnabled) return;
+  const ac = getAC(); if (!ac) return;
+  const t = ac.currentTime;
+  let notes;
+  if (rank === 'SSS') notes = [523,659,784,1046,1318,1568];
+  else if (rank === 'SS+' || rank === 'SS') notes = [523,659,784,988,1174,1568];
+  else if (rank === 'S+' || rank === 'S') notes = [523,659,784,1046];
+  else if (rank === 'A+' || rank === 'A') notes = [440,554,659,880];
+  else notes = [330,392,494,659];
+  for (let i = 0; i < notes.length; i++) tone(notes[i], 0.18, 'triangle', 0.028 * SFX_VOLUME, t + i * 0.12);
+}
+
+function showMenu() {
+  state = 'menu';
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  shell.classList.add('hidden-start');
+  shell.classList.remove('word-danger', 'time-low');
+  $('countdownOverlay').classList.add('hidden');
+  $('resultOverlay').classList.add('hidden');
+  $('startOverlay').classList.remove('hidden');
+}
+
+function initAudioOnGesture() {
+  if (!bgmEnabled && !sfxEnabled) return;
+  const ac = getAC(); if (!ac) return;
+  if (ac.state === 'suspended') ac.resume();
+  if (bgmEnabled) startBgm();
+}
+
+function updateAudioButtons() {
+  const bgmText = bgmEnabled ? 'BGM ON' : 'BGM OFF';
+  const sfxText = sfxEnabled ? '効果音 ON' : '効果音 OFF';
+  ['menuBgmBtn', 'playBgmBtn'].forEach(function(id) { if ($(id)) $(id).textContent = bgmText; });
+  ['menuSfxBtn', 'playSfxBtn'].forEach(function(id) { if ($(id)) $(id).textContent = sfxText; });
+  ['menuBgmBtn', 'playBgmBtn'].forEach(function(id) { if ($(id)) $(id).classList.toggle('is-off', !bgmEnabled); });
+  ['menuSfxBtn', 'playSfxBtn'].forEach(function(id) { if ($(id)) $(id).classList.toggle('is-off', !sfxEnabled); });
+  if (!bgmEnabled) stopBgm();
+  else if (state === 'playing' || state === 'countdown') startBgm();
+}
+
+function toggleBgm() {
+  bgmEnabled = !bgmEnabled;
+  if (bgmEnabled) initAudioOnGesture();
+  updateAudioButtons();
+  document.body.focus();
+}
+
+function toggleSfx() {
+  sfxEnabled = !sfxEnabled;
+  if (sfxEnabled) initAudioOnGesture();
+  updateAudioButtons();
+  document.body.focus();
+}
+
+function scaleApp() {
+  const root = document.getElementById('app-root');
+  if (!root) return;
+  const naturalW = 1060;
+  const naturalH = 700;
+  const viewportW = Math.min(
+    window.innerWidth || naturalW,
+    document.documentElement.clientWidth || naturalW,
+    window.visualViewport ? window.visualViewport.width : naturalW
+  );
+  const viewportH = Math.min(
+    window.innerHeight || naturalH,
+    document.documentElement.clientHeight || naturalH,
+    window.visualViewport ? window.visualViewport.height : naturalH
+  );
+  const scale = Math.min(1, viewportW / (naturalW + 16), viewportH / (naturalH + 16));
+  root.style.transform = 'scale(' + scale + ')';
+}
+
+
+$('startBtn').addEventListener('click', startCountdown);
+$('resetBtn').addEventListener('click', startCountdown);
+$('restartBtn').addEventListener('click', startCountdown);
+$('backBtn').addEventListener('click', showMenu);
+$('menuBgmBtn').addEventListener('click', toggleBgm);
+$('menuSfxBtn').addEventListener('click', toggleSfx);
+$('playBgmBtn').addEventListener('click', toggleBgm);
+$('playSfxBtn').addEventListener('click', toggleSfx);
+
+window.addEventListener('keydown', handleKey);
+window.addEventListener('resize', scaleApp);
+window.addEventListener('load', scaleApp);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', scaleApp);
+window.addEventListener('click', function() { document.body.focus(); if (state === 'playing') initAudioOnGesture(); });
+document.body.focus();
+scaleApp();
+requestAnimationFrame(scaleApp);
+setTimeout(scaleApp, 120);
+renderRoman();
+updateAudioButtons();
+</script>
+</body>
+</html>

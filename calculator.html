@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compact Simple Calculator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #f3f4f6;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #111827;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 14px;
+    }
+
+    .calculator {
+      width: min(100%, 300px);
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+
+    .display {
+      padding: 10px 12px 8px;
+      background: linear-gradient(180deg, #ffffff, #f9fafb);
+      border-bottom: 1px solid #e5e7eb;
+      text-align: right;
+      min-height: 92px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .mini-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+      color: #9ca3af;
+      font-size: 10px;
+      min-height: 14px;
+    }
+
+    .memory {
+      color: #2563eb;
+      font-weight: 800;
+    }
+
+    .expression {
+      min-height: 18px;
+      font-size: 14px;
+      color: #6b7280;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .result {
+      min-height: 34px;
+      font-size: 30px;
+      line-height: 1.12;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .keypad {
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      background: #ffffff;
+    }
+
+    button {
+      border: 0;
+      border-radius: 9px;
+      min-height: 42px;
+      font-size: 14px;
+      font-weight: 750;
+      color: #111827;
+      background: #f3f4f6;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.05s ease, filter 0.12s ease, background 0.12s ease;
+    }
+
+    button:hover {
+      filter: brightness(0.98);
+    }
+
+    button:active,
+    button.pressed {
+      transform: scale(0.97);
+      filter: brightness(0.94);
+    }
+
+    .utility {
+      background: #e5e7eb;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .operator {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .equal {
+      background: #2563eb;
+      color: white;
+    }
+
+    .zero {
+      grid-column: span 2;
+      text-align: left;
+      padding-left: 18px;
+    }
+
+    .history-wrap {
+      border-top: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+
+    details {
+      overflow: hidden;
+    }
+
+    summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 7px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #6b7280;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary::after {
+      content: "＋";
+      color: #9ca3af;
+    }
+
+    details[open] summary::after {
+      content: "−";
+    }
+
+    .history {
+      max-height: 90px;
+      overflow: auto;
+      padding: 0 8px 8px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .history-item {
+      border: 1px solid #e5e7eb;
+      background: white;
+      border-radius: 9px;
+      padding: 6px 8px;
+      text-align: right;
+      cursor: pointer;
+    }
+
+    .history-item:hover {
+      background: #f3f4f6;
+    }
+
+    .history-expr {
+      font-size: 10px;
+      color: #9ca3af;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-result {
+      font-size: 13px;
+      font-weight: 800;
+      color: #111827;
+    }
+
+    .empty-history {
+      color: #9ca3af;
+      font-size: 11px;
+      text-align: center;
+      padding: 8px;
+    }
+
+    @media (max-width: 420px) {
+      body {
+        padding: 0;
+        background: white;
+        place-items: stretch;
+      }
+
+      .calculator {
+        width: 100vw;
+        min-height: 100dvh;
+        border-radius: 0;
+        border: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .display {
+        flex: 1;
+        min-height: 170px;
+      }
+
+      .keypad {
+        gap: 4px;
+      }
+
+      button {
+        min-height: 62px;
+      }
+    }
+
+    @media (max-height: 620px) {
+      body {
+        padding: 4px;
+      }
+
+      .display {
+        min-height: 98px;
+        padding: 8px;
+        gap: 4px;
+      }
+
+      .result {
+        font-size: 34px;
+        min-height: 40px;
+      }
+
+      .expression {
+        font-size: 15px;
+      }
+
+      .keypad {
+        padding: 9px;
+        gap: 7px;
+      }
+
+      button {
+        min-height: 46px;
+        border-radius: 14px;
+        font-size: 20px;
+      }
+
+      .utility {
+        font-size: 15px;
+      }
+
+      .history {
+        max-height: 84px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="calculator" aria-label="シンプル電卓">
+    <section class="display">
+      <div class="mini-row">
+        <span id="memoryIndicator"></span>
+        <span id="status">キーボード入力対応</span>
+      </div>
+      <div class="expression" id="expression"></div>
+      <div class="result" id="result">0</div>
+    </section>
+
+    <section class="keypad" id="keypad">
+      <button class="utility" data-action="clear">AC</button>
+      <button class="utility" data-action="toggle">±</button>
+      <button class="utility" data-action="percent">%</button>
+      <button class="operator" data-op="÷">÷</button>
+
+      <button data-num="7">7</button>
+      <button data-num="8">8</button>
+      <button data-num="9">9</button>
+      <button class="operator" data-op="×">×</button>
+
+      <button data-num="4">4</button>
+      <button data-num="5">5</button>
+      <button data-num="6">6</button>
+      <button class="operator" data-op="−">−</button>
+
+      <button data-num="1">1</button>
+      <button data-num="2">2</button>
+      <button data-num="3">3</button>
+      <button class="operator" data-op="+">+</button>
+
+      <button class="zero" data-num="0">0</button>
+      <button data-action="decimal">.</button>
+      <button class="equal" data-action="equals">=</button>
+
+      <button class="utility" data-action="back">⌫</button>
+      <button class="utility" data-action="mc">MC</button>
+      <button class="utility" data-action="mr">MR</button>
+      <button class="utility" data-action="mplus">M+</button>
+    </section>
+
+    <section class="history-wrap">
+      <details>
+        <summary>履歴</summary>
+        <div class="history" id="history">
+          <div class="empty-history">まだ履歴はありません</div>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    const expressionEl = document.getElementById("expression");
+    const resultEl = document.getElementById("result");
+    const statusEl = document.getElementById("status");
+    const historyEl = document.getElementById("history");
+    const memoryIndicatorEl = document.getElementById("memoryIndicator");
+    const keypad = document.getElementById("keypad");
+
+    let display = "0";
+    let previous = null;
+    let operator = null;
+    let waitingForNext = false;
+    let memory = 0;
+    let history = [];
+    let justCalculated = false;
+
+    const MAX_DIGITS = 14;
+
+    function updateDisplay() {
+      resultEl.textContent = display;
+      expressionEl.textContent = buildExpressionText();
+      memoryIndicatorEl.textContent = memory !== 0 ? "M" : "";
+      memoryIndicatorEl.className = memory !== 0 ? "memory" : "";
+    }
+
+    function buildExpressionText() {
+      if (previous === null || operator === null) return "";
+      return `${format(previous)} ${operator}`;
+    }
+
+    function inputNumber(num) {
+      if (justCalculated && operator === null) {
+        display = "0";
+        justCalculated = false;
+      }
+
+      if (waitingForNext) {
+        display = num;
+        waitingForNext = false;
+        return;
+      }
+
+      if (display === "0") {
+        display = num;
+      } else if (display === "-0") {
+        display = "-" + num;
+      } else {
+        const rawDigits = display.replace(/[-.]/g, "");
+        if (rawDigits.length >= MAX_DIGITS) return;
+        display += num;
+      }
+    }
+
+    function inputDecimal() {
+      if (justCalculated && operator === null) {
+        display = "0";
+        justCalculated = false;
+      }
+
+      if (waitingForNext) {
+        display = "0.";
+        waitingForNext = false;
+        return;
+      }
+
+      if (!display.includes(".")) {
+        display += ".";
+      }
+    }
+
+    function chooseOperator(nextOperator) {
+      const current = parseNumber(display);
+
+      if (operator && !waitingForNext) {
+        const result = calculate(previous, current, operator);
+        addHistory(`${format(previous)} ${operator} ${format(current)}`, result);
+        display = format(result);
+        previous = result;
+      } else {
+        previous = current;
+      }
+
+      operator = nextOperator;
+      waitingForNext = true;
+      justCalculated = false;
+    }
+
+    function performEquals() {
+      if (operator === null || previous === null) return;
+
+      const current = parseNumber(display);
+      const expr = `${format(previous)} ${operator} ${format(current)}`;
+      const result = calculate(previous, current, operator);
+
+      addHistory(expr, result);
+      display = format(result);
+      previous = null;
+      operator = null;
+      waitingForNext = true;
+      justCalculated = true;
+      showStatus("計算しました");
+    }
+
+    function calculate(a, b, op) {
+      switch (op) {
+        case "+": return a + b;
+        case "−": return a - b;
+        case "×": return a * b;
+        case "÷":
+          if (b === 0) {
+            showStatus("0では割れません");
+            return NaN;
+          }
+          return a / b;
+        default: return b;
+      }
+    }
+
+    function parseNumber(value) {
+      return Number(String(value).replace(/,/g, ""));
+    }
+
+    function format(value) {
+      if (!Number.isFinite(value)) return "Error";
+
+      if (Math.abs(value) >= 1e14 || (Math.abs(value) > 0 && Math.abs(value) < 1e-8)) {
+        return value.toExponential(8).replace(/\.?0+e/, "e");
+      }
+
+      const rounded = Number(value.toPrecision(12));
+      const str = String(rounded);
+      if (str.length > 16) return rounded.toExponential(8).replace(/\.?0+e/, "e");
+      return str;
+    }
+
+    function clearAll() {
+      display = "0";
+      previous = null;
+      operator = null;
+      waitingForNext = false;
+      justCalculated = false;
+      showStatus("クリア");
+    }
+
+    function backspace() {
+      if (waitingForNext || justCalculated) {
+        display = "0";
+        waitingForNext = false;
+        justCalculated = false;
+        return;
+      }
+
+      if (display.length <= 1 || (display.length === 2 && display.startsWith("-"))) {
+        display = "0";
+      } else {
+        display = display.slice(0, -1);
+      }
+    }
+
+    function toggleSign() {
+      if (display === "0" || display === "Error") return;
+      display = display.startsWith("-") ? display.slice(1) : "-" + display;
+    }
+
+    function percent() {
+      const value = parseNumber(display);
+      if (previous !== null && operator) {
+        display = format(previous * value / 100);
+      } else {
+        display = format(value / 100);
+      }
+    }
+
+    function memoryClear() {
+      memory = 0;
+      showStatus("Memory Clear");
+    }
+
+    function memoryRecall() {
+      display = format(memory);
+      waitingForNext = false;
+      justCalculated = false;
+      showStatus("Memory Recall");
+    }
+
+    function memoryPlus() {
+      const value = parseNumber(display);
+      if (Number.isFinite(value)) {
+        memory += value;
+        showStatus("Memory +");
+      }
+    }
+
+    function addHistory(expr, result) {
+      history.unshift({
+        expr,
+        result: format(result)
+      });
+      history = history.slice(0, 20);
+      renderHistory();
+    }
+
+    function renderHistory() {
+      historyEl.innerHTML = "";
+
+      if (history.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty-history";
+        empty.textContent = "まだ履歴はありません";
+        historyEl.appendChild(empty);
+        return;
+      }
+
+      for (const item of history) {
+        const div = document.createElement("div");
+        div.className = "history-item";
+        div.innerHTML = `
+          <div class="history-expr">${escapeHtml(item.expr)}</div>
+          <div class="history-result">${escapeHtml(item.result)}</div>
+        `;
+        div.addEventListener("click", () => {
+          display = item.result;
+          previous = null;
+          operator = null;
+          waitingForNext = true;
+          justCalculated = true;
+          updateDisplay();
+        });
+        historyEl.appendChild(div);
+      }
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, ch => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[ch]));
+    }
+
+    let statusTimer = null;
+    function showStatus(text) {
+      statusEl.textContent = text;
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => {
+        statusEl.textContent = "キーボード入力対応";
+      }, 1200);
+    }
+
+    function handleButton(button) {
+      const num = button.dataset.num;
+      const op = button.dataset.op;
+      const action = button.dataset.action;
+
+      if (num !== undefined) inputNumber(num);
+      else if (op) chooseOperator(op);
+      else if (action === "decimal") inputDecimal();
+      else if (action === "equals") performEquals();
+      else if (action === "clear") clearAll();
+      else if (action === "back") backspace();
+      else if (action === "toggle") toggleSign();
+      else if (action === "percent") percent();
+      else if (action === "mc") memoryClear();
+      else if (action === "mr") memoryRecall();
+      else if (action === "mplus") memoryPlus();
+
+      updateDisplay();
+    }
+
+    keypad.addEventListener("click", event => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      handleButton(button);
+      animateButton(button);
+    });
+
+    function animateButton(button) {
+      button.classList.add("pressed");
+      setTimeout(() => button.classList.remove("pressed"), 90);
+    }
+
+    function findButtonByKey(key) {
+      const map = {
+        "/": "÷",
+        "*": "×",
+        "-": "−",
+        "+": "+",
+        "Enter": "=",
+        "=": "=",
+        ".": ".",
+        "Backspace": "⌫",
+        "Escape": "AC",
+        "%": "%"
+      };
+
+      if (/^[0-9]$/.test(key)) {
+        return [...keypad.querySelectorAll("button")].find(b => b.textContent.trim() === key);
+      }
+
+      const label = map[key];
+      if (!label) return null;
+      return [...keypad.querySelectorAll("button")].find(b => b.textContent.trim() === label);
+    }
+
+    document.addEventListener("keydown", event => {
+      const key = event.key;
+
+      if (/^[0-9]$/.test(key)) {
+        event.preventDefault();
+        inputNumber(key);
+      } else if (key === ".") {
+        event.preventDefault();
+        inputDecimal();
+      } else if (key === "+") {
+        event.preventDefault();
+        chooseOperator("+");
+      } else if (key === "-") {
+        event.preventDefault();
+        chooseOperator("−");
+      } else if (key === "*") {
+        event.preventDefault();
+        chooseOperator("×");
+      } else if (key === "/") {
+        event.preventDefault();
+        chooseOperator("÷");
+      } else if (key === "Enter" || key === "=") {
+        event.preventDefault();
+        performEquals();
+      } else if (key === "Backspace") {
+        event.preventDefault();
+        backspace();
+      } else if (key === "Escape") {
+        event.preventDefault();
+        clearAll();
+      } else if (key === "%") {
+        event.preventDefault();
+        percent();
+      } else {
+        return;
+      }
+
+      const button = findButtonByKey(key);
+      if (button) animateButton(button);
+      updateDisplay();
+    });
+
+    updateDisplay();
+  </script>
+</body>
+</html>

@@ -1,0 +1,2594 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Nonogram</title>
+  <style>
+    :root {
+      --outer-gap: clamp(8px, 1.5vw, 16px);
+      --cell: 32px;
+      --n: 10;
+      --clue-w: 110px;
+      --clue-h: 110px;
+      --board-size: calc(var(--cell) * var(--n));
+      --bg: #edf4f1;
+      --panel: #fffdf8;
+      --panel-soft: #f3f7f4;
+      --ink: #17241f;
+      --muted: #62726d;
+      --accent: #e9b14a;
+      --accent-ink: #241806;
+      --blue: #287f8b;
+      --filled: #182d29;
+      --grid: #c3d0ca;
+      --block: #4e655e;
+      --paper: #fffefa;
+      --clue-bg: #edf4f1;
+      --clue-done: #dde8e4;
+      --danger: #b85a43;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      background:
+        linear-gradient(135deg, rgba(40, 127, 139, 0.18) 0%, rgba(40, 127, 139, 0.07) 32%, transparent 32.2%),
+        linear-gradient(180deg, #ecf3f0 0%, #faf8f1 50%, #e8eeeb 100%),
+        var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    body {
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    #app-root {
+      transform-origin: center center;
+      flex-shrink: 0;
+      width: min(1400px, calc(100vw - var(--outer-gap) * 2));
+      height: calc(100vh - var(--outer-gap) * 2);
+      height: calc(100dvh - var(--outer-gap) * 2);
+      position: relative;
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      min-height: 0;
+      margin: 0 auto;
+      padding: clamp(10px, 1.5vmin, 18px);
+      border-radius: 8px;
+      background: rgba(255, 253, 248, 0.97);
+      box-shadow: 0 24px 70px rgba(23, 36, 31, 0.17);
+      border: 1px solid rgba(78, 101, 94, 0.16);
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 10px;
+      min-height: 42px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 42px);
+      letter-spacing: 0.06em;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 280px) repeat(5, minmax(92px, 1fr));
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+
+    .control {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    select,
+    button {
+      min-height: 38px;
+      border: 1px solid rgba(83, 103, 97, 0.2);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    select {
+      background: #ffffff;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(23, 36, 31, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    button {
+      color: var(--ink);
+      background: #edf2ef;
+      cursor: pointer;
+      box-shadow: 0 3px 0 rgba(78, 101, 94, 0.24);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: var(--accent-ink);
+      border-color: rgba(136, 87, 14, 0.18);
+    }
+
+    button:hover { background: #e5ece9; }
+    button.primary:hover { background: #e9ac3d; }
+
+    button:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 rgba(78, 101, 94, 0.24);
+    }
+
+    select:focus-visible,
+    button:focus-visible {
+      outline: 3px solid rgba(40, 127, 139, 0.28);
+      outline-offset: 2px;
+    }
+
+    .info-row {
+      display: none;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 0;
+    }
+
+    .app.game-focused {
+      grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .pill {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: #edf6f4;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid rgba(83, 103, 97, 0.12);
+    }
+
+    .pill span {
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .status {
+      display: inline-flex;
+      color: #7a4f0d;
+      background: #fff3d6;
+      border-color: rgba(240, 182, 74, 0.42);
+    }
+
+    .status:empty { display: none; }
+
+    .stage-wrap {
+      width: 100%;
+      min-height: 0;
+      height: 100%;
+      max-height: 100%;
+      padding: clamp(6px, 1vmin, 12px);
+      border-radius: 8px;
+      background:
+        repeating-linear-gradient(0deg, rgba(78, 101, 94, 0.035) 0 1px, transparent 1px 28px),
+        repeating-linear-gradient(90deg, rgba(78, 101, 94, 0.03) 0 1px, transparent 1px 28px),
+        linear-gradient(180deg, #f4f8f5, #e7efeb);
+      border: 1px solid rgba(78, 101, 94, 0.18);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      position: relative;
+    }
+
+    .nonogram {
+      --board-size: calc(var(--cell) * var(--n));
+      display: grid;
+      grid-template-columns: var(--clue-w) var(--board-size);
+      grid-template-rows: var(--clue-h) var(--board-size);
+      width: calc(var(--clue-w) + var(--board-size));
+      height: calc(var(--clue-h) + var(--board-size));
+      transform-origin: top center;
+      user-select: none;
+      flex: 0 0 auto;
+      position: relative;
+      overflow: hidden;
+      border-radius: 6px;
+      background: var(--block);
+      box-shadow: 0 18px 40px rgba(23, 36, 31, 0.16), 0 0 0 1px rgba(78, 101, 94, 0.3);
+    }
+
+    .nonogram::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 3px solid var(--block);
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .corner,
+    .col-clues,
+    .row-clues,
+    .board,
+    .cell,
+    .clue-row,
+    .clue-col {
+      box-sizing: border-box;
+    }
+
+    .corner {
+      grid-column: 1;
+      grid-row: 1;
+      width: var(--clue-w);
+      height: var(--clue-h);
+      padding: 0;
+      border: 2px solid var(--block);
+      border-right: 0;
+      border-bottom: 0;
+      background: #d4e0dc;
+      color: transparent;
+      font-size: 0;
+    }
+
+    .col-clues {
+      grid-column: 2;
+      grid-row: 1;
+      display: grid;
+      grid-template-columns: repeat(var(--n), var(--cell));
+      width: var(--board-size);
+      height: var(--clue-h);
+      background: var(--clue-bg);
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    .row-clues {
+      grid-column: 1;
+      grid-row: 2;
+      display: grid;
+      grid-template-rows: repeat(var(--n), var(--cell));
+      width: var(--clue-w);
+      height: var(--board-size);
+      background: var(--clue-bg);
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    .clue-row,
+    .clue-col {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: max(1px, calc(var(--cell) * 0.12));
+      padding: 1px max(2px, calc(var(--cell) * 0.14));
+      font-weight: 800;
+      font-size: clamp(7px, calc(var(--cell) * 0.42), 15px);
+      line-height: 1;
+      color: #253b36;
+      border-color: #c3d0ca;
+      transition: background 0.08s ease, color 0.08s ease;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .clue-row span,
+    .clue-col span {
+      display: inline-block;
+      flex: 0 0 auto;
+      min-width: 0;
+    }
+
+    .clue-row {
+      width: var(--clue-w);
+      height: var(--cell);
+      border-left: 2px solid var(--block);
+      border-top: 1px solid #c3d0ca;
+      border-right: 2px solid var(--block);
+      text-align: right;
+    }
+
+    .clue-col {
+      width: var(--cell);
+      height: var(--clue-h);
+      flex-direction: column;
+      justify-content: flex-end;
+      border-left: 1px solid #c3d0ca;
+      border-top: 2px solid var(--block);
+      border-bottom: 2px solid var(--block);
+      white-space: normal;
+    }
+
+    .clue-row.block-top {
+      border-top-width: 2px;
+      border-top-color: var(--block);
+    }
+
+    .clue-col.block-left {
+      border-left-width: 2px;
+      border-left-color: var(--block);
+    }
+
+    .clue-row.block-bottom {
+      border-bottom: 2px solid var(--block);
+    }
+
+    .clue-col.block-right {
+      border-right: 2px solid var(--block);
+    }
+
+    .clue-row.done,
+    .clue-col.done {
+      color: #7c8b86;
+      background: var(--clue-done);
+    }
+
+    .clue-row.axis-hover,
+    .clue-col.axis-hover {
+      background: #c7ece8;
+      color: #123a38;
+    }
+
+    .board {
+      grid-column: 2;
+      grid-row: 2;
+      display: grid;
+      grid-template-columns: repeat(var(--n), var(--cell));
+      grid-template-rows: repeat(var(--n), var(--cell));
+      width: var(--board-size);
+      height: var(--board-size);
+      background: var(--paper);
+      overflow: hidden;
+      touch-action: none;
+      cursor: default;
+    }
+
+    .cell {
+      width: var(--cell);
+      height: var(--cell);
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-left: 1px solid var(--grid);
+      border-top: 1px solid var(--grid);
+      border-radius: 0;
+      background: var(--paper);
+      color: var(--block);
+      box-shadow: none;
+      display: grid;
+      place-items: center;
+      position: relative;
+      font-size: clamp(8px, calc(var(--cell) * 0.62), 20px);
+      line-height: 1;
+      user-select: none;
+      touch-action: none;
+      flex: 0 0 auto;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .cell.block-left { border-left: 2px solid var(--block); }
+    .cell.block-top { border-top: 2px solid var(--block); }
+    .cell.block-right { border-right: 2px solid var(--block); }
+    .cell.block-bottom { border-bottom: 2px solid var(--block); }
+
+    .cell.filled {
+      background: linear-gradient(145deg, #31514b, var(--filled));
+      border-color: #1f332f;
+    }
+
+    .cell.mark::before,
+    .cell.mark::after {
+      content: "";
+      position: absolute;
+      width: 72%;
+      height: max(2px, calc(var(--cell) * 0.085));
+      border-radius: 3px;
+      background: var(--danger);
+    }
+
+    .cell.mark::before { transform: rotate(45deg); }
+    .cell.mark::after { transform: rotate(-45deg); }
+
+    .cell.axis-hover {
+      background: #e2f4f1;
+    }
+
+    .cell.filled.axis-hover {
+      background: linear-gradient(145deg, #3f615a, #28433e);
+    }
+
+    .cell.pointer-hover {
+      outline: max(2px, calc(var(--cell) * 0.08)) solid rgba(47, 159, 172, 0.78);
+      outline-offset: -3px;
+      z-index: 2;
+    }
+
+    .cell.preview {
+      outline: max(2px, calc(var(--cell) * 0.08)) solid rgba(240, 182, 74, 0.95);
+      outline-offset: -3px;
+      z-index: 3;
+    }
+
+    .cell.selected {
+      animation: pulse 0.55s ease;
+    }
+
+    @keyframes pulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.45); }
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(18, 27, 25, 0.64);
+      z-index: 20;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(92vw, 420px);
+      padding: 28px;
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      text-align: center;
+      box-shadow: 0 28px 80px rgba(18, 27, 25, 0.32);
+      border: 1px solid rgba(83, 103, 97, 0.18);
+    }
+
+    .modal-card h2 {
+      margin: 0 0 8px;
+      font-size: 34px;
+    }
+
+    .modal-card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+
+
+    .audio-toggle.on {
+      background: #d9f4ef;
+      color: #114b45;
+      border-color: rgba(40, 127, 139, 0.22);
+    }
+
+    .audio-toggle.off {
+      background: #ece3dd;
+      color: #6d3a2d;
+    }
+
+    .cell.fill-pop {
+      animation: fillPop 0.24s cubic-bezier(.2, 1.45, .4, 1);
+    }
+
+    .cell.mark-pop {
+      animation: markPop 0.22s ease-out;
+    }
+
+    .cell.clear-pop {
+      animation: clearPop 0.22s ease-out;
+    }
+
+    .cell.undo-pop {
+      animation: undoPop 0.32s ease-out;
+    }
+
+    .cell.fill-pop::after,
+    .cell.clear-pop::after {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border-radius: 4px;
+      border: 2px solid rgba(233, 177, 74, 0.85);
+      opacity: 0;
+      pointer-events: none;
+      animation: ringPop 0.36s ease-out;
+    }
+
+    .cell.mark-pop::after {
+      filter: drop-shadow(0 0 6px rgba(184, 90, 67, 0.45));
+    }
+
+    @keyframes fillPop {
+      0% { transform: scale(0.78); filter: brightness(1.6); }
+      70% { transform: scale(1.08); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    @keyframes markPop {
+      0% { transform: rotate(-5deg) scale(0.72); filter: brightness(1.45); }
+      80% { transform: rotate(2deg) scale(1.08); }
+      100% { transform: rotate(0) scale(1); filter: brightness(1); }
+    }
+
+    @keyframes clearPop {
+      0% { transform: scale(1.06); filter: brightness(1.25); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    @keyframes undoPop {
+      0% { transform: translateY(-2px) scale(1.08); filter: brightness(1.35); }
+      100% { transform: translateY(0) scale(1); filter: brightness(1); }
+    }
+
+    @keyframes ringPop {
+      0% { opacity: 0.9; transform: scale(0.45); }
+      100% { opacity: 0; transform: scale(1.75); }
+    }
+
+    #fxLayer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 30;
+      overflow: hidden;
+    }
+
+    .spark {
+      position: absolute;
+      z-index: 12;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #e9b14a;
+      transform: translate(-50%, -50%);
+      animation: sparkFly 0.52s ease-out forwards;
+    }
+
+    .spark.mark-spark {
+      background: #b85a43;
+      width: 8px;
+      height: 3px;
+      border-radius: 999px;
+    }
+
+    .spark.clear-spark {
+      background: #82aaa2;
+      width: 6px;
+      height: 6px;
+    }
+
+    @keyframes sparkFly {
+      from { opacity: 0.95; transform: translate(-50%, -50%) scale(0.65); }
+      to { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1); }
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(12px);
+      min-width: min(92vw, 280px);
+      max-width: min(92vw, 520px);
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(24, 45, 41, 0.92);
+      color: #fffdf8;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 40;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .confetti {
+      position: fixed;
+      top: -10px;
+      width: 8px;
+      height: 14px;
+      border-radius: 2px;
+      background: #e9b14a;
+      animation: confettiFall 1.8s ease-in forwards;
+      z-index: 35;
+    }
+
+    @keyframes confettiFall {
+      to { transform: translateY(110vh) rotate(540deg); opacity: 0; }
+    }
+
+    @media (max-width: 680px) {
+      :root { --outer-gap: 8px; }
+      .app { padding: 8px; }
+      .toolbar { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .toolbar .control { grid-column: 1 / -1; }
+      .toolbar button, .toolbar select { width: 100%; }
+      .stage-wrap { padding: 4px; }
+    }
+
+    @media (max-width: 390px) {
+      .toolbar { grid-template-columns: 1fr; }
+      .info-row { gap: 6px; }
+      .pill { min-height: 29px; padding: 4px 9px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body tabindex="0">
+  <div id="app-root">
+  <main class="app game-focused">
+    <section class="hero" aria-label="game title">
+      <div>
+        <h1>NONOGRAM</h1>
+      </div>
+      <div class="hero-actions" aria-label="quick status">
+        <div class="pill">時間 <span id="timer">00:00</span></div>
+        <div class="pill">塗った数 <span id="filledCount">0</span>/<span id="targetCount">0</span></div>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="game controls">
+      <label class="control">難易度
+        <select id="difficulty">
+          <option value="easy">かんたん 5×5</option>
+          <option value="normal" selected>ふつう 10×10</option>
+          <option value="hard">むずかしい 15×15</option>
+          <option value="expert">激むず 20×20</option>
+        </select>
+      </label>
+      <button class="primary" id="newGame" type="button">新しい問題</button>
+      <button id="hintBtn" type="button">ヒント</button>
+      <button id="undoBtn" type="button">元に戻す</button>
+      <button class="audio-toggle on" id="musicBtn" type="button">BGM ON</button>
+      <button class="audio-toggle on" id="sfxBtn" type="button">効果音 ON</button>
+    </section>
+
+    <section class="info-row">
+      <div class="pill status" id="status"></div>
+    </section>
+
+    <section class="stage-wrap" id="stageWrap">
+      <div class="nonogram" id="nonogram">
+        <div class="corner" aria-hidden="true"></div>
+        <div class="col-clues" id="colClues"></div>
+        <div class="row-clues" id="rowClues"></div>
+        <div class="board" id="board"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="clearModal">
+    <div class="modal-card">
+      <h2>CLEAR!</h2>
+      <p>完成です。すべてのマスが正しく塗られました。</p>
+      <button class="primary" id="modalNew" type="button">次の問題へ</button>
+    </div>
+  </div>
+
+  <div id="fxLayer" aria-hidden="true"></div>
+  <div class="toast" id="toast" aria-live="polite"></div>
+  </div>
+
+  <script>
+    "use strict";
+
+    window.addEventListener("error", function(e) {
+      console.error("Error:", e.message, e.filename, e.lineno);
+    });
+
+    const memoryStore = Object.create(null);
+    function storageGet(key) {
+      try { return localStorage.getItem(key); }
+      catch (e) { return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null; }
+    }
+    function storageSet(key, value) {
+      try { localStorage.setItem(key, value); }
+      catch (e) { memoryStore[key] = value; }
+    }
+
+    const settings = {
+      easy:   { size: 5,  density: 0.48, cell: 42, clue: 74,  minScore: 7,   tries: 100 },
+      normal: { size: 10, density: 0.44, cell: 34, clue: 104, minScore: 34,  tries: 140 },
+      hard:   { size: 15, density: 0.42, cell: 27, clue: 128, minScore: 74,  tries: 125 },
+      expert: { size: 20, density: 0.34, cell: 22, clue: 164, minScore: 135, tries: 95 }
+    };
+
+    const boardEl = document.getElementById("board");
+    const nonogramEl = document.getElementById("nonogram");
+    const stageWrap = document.getElementById("stageWrap");
+    const rowCluesEl = document.getElementById("rowClues");
+    const colCluesEl = document.getElementById("colClues");
+    const difficultyEl = document.getElementById("difficulty");
+    const timerEl = document.getElementById("timer");
+    const filledCountEl = document.getElementById("filledCount");
+    const targetCountEl = document.getElementById("targetCount");
+    const statusEl = document.getElementById("status");
+    const clearModal = document.getElementById("clearModal");
+    const fxLayer = document.getElementById("fxLayer");
+    const toastEl = document.getElementById("toast");
+    const musicBtn = document.getElementById("musicBtn");
+    const sfxBtn = document.getElementById("sfxBtn");
+    const undoBtn = document.getElementById("undoBtn");
+
+    let size = 10;
+    let solution = [];
+    let state = [];
+    let rowClues = [];
+    let colClues = [];
+    let cells = [];
+    let dragging = false;
+    let dragStart = null;
+    let dragLock = null;
+    let dragTargetState = 1;
+    let dragTouched = new Set();
+    let dragInitialState = null;
+    let dragProtectConfirmed = true;
+    let dragMoved = false;
+    let hoverCell = null;
+    let startedAt = Date.now();
+    let timerId = null;
+    let solved = false;
+    let audioCtx = null;
+    let bgmTimerId = null;
+    let bgmPlaying = false;
+    let bgmStep = 0;
+    let lastSoundAt = 0;
+    let musicEnabled = storageGet("nonogram.music") !== "0";
+    let sfxEnabled = storageGet("nonogram.sfx") !== "0";
+    let undoStack = [];
+    let toastTimerId = null;
+    let recentSolutionSignatures = [];
+
+    function randInt(max) {
+      return Math.floor(Math.random() * max);
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = randInt(i + 1);
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function countSolutionCells(grid) {
+      let total = 0;
+      for (const row of grid) for (const v of row) if (v) total++;
+      return total;
+    }
+
+    function gridSignature(grid) {
+      return grid.map(row => row.map(v => v ? "1" : "0").join("")).join("/");
+    }
+
+    function isRecentGeneratedGrid(grid) {
+      return recentSolutionSignatures.includes(gridSignature(grid));
+    }
+
+    function rememberGeneratedGrid(grid) {
+      const sig = gridSignature(grid);
+      recentSolutionSignatures = recentSolutionSignatures.filter(item => item !== sig);
+      recentSolutionSignatures.unshift(sig);
+      recentSolutionSignatures = recentSolutionSignatures.slice(0, 8);
+    }
+
+    function makeCluesForLine(line) {
+      const clues = [];
+      let count = 0;
+      for (const value of line) {
+        if (value) count++;
+        else if (count) {
+          clues.push(count);
+          count = 0;
+        }
+      }
+      if (count) clues.push(count);
+      return clues.length ? clues : [0];
+    }
+
+    function cluesForGrid(grid) {
+      const n = grid.length;
+      const rows = grid.map(row => makeCluesForLine(row));
+      const cols = [];
+      for (let c = 0; c < n; c++) {
+        const col = [];
+        for (let r = 0; r < n; r++) col.push(grid[r][c]);
+        cols.push(makeCluesForLine(col));
+      }
+      return { rows, cols };
+    }
+
+    const linePatternCache = new Map();
+
+    function clueKey(n, clues) {
+      return `${n}|${clues.join(",")}`;
+    }
+
+    function makeLinePatterns(n, clues) {
+      const key = clueKey(n, clues);
+      if (linePatternCache.has(key)) return linePatternCache.get(key);
+
+      const results = [];
+      const limit = n <= 10 ? 60000 : n <= 15 ? 45000 : 28000;
+
+      if (clues.length === 1 && clues[0] === 0) {
+        const empty = [Array(n).fill(0)];
+        linePatternCache.set(key, empty);
+        return empty;
+      }
+
+      function rec(index, pos, line) {
+        if (results.length > limit) return;
+        if (index === clues.length) {
+          const done = line.slice();
+          while (done.length < n) done.push(0);
+          results.push(done);
+          return;
+        }
+
+        let remaining = 0;
+        for (let i = index; i < clues.length; i++) remaining += clues[i];
+        remaining += clues.length - index - 1;
+        const maxStart = n - remaining;
+
+        for (let start = pos; start <= maxStart; start++) {
+          const next = line.slice();
+          while (next.length < start) next.push(0);
+          for (let i = 0; i < clues[index]; i++) next.push(1);
+          if (index < clues.length - 1) next.push(0);
+          rec(index + 1, next.length, next);
+          if (results.length > limit) break;
+        }
+      }
+
+      rec(0, 0, []);
+      const value = results.length > limit ? null : results;
+      linePatternCache.set(key, value);
+      return value;
+    }
+
+    function cloneWork(work) {
+      return work.map(row => row.slice());
+    }
+
+    function applyAllLineLogic(work, rows, cols, stats, maxLoops = 999) {
+      const n = work.length;
+      let changedAny = false;
+
+      function applyLine(type, index) {
+        const clues = type === "row" ? rows[index] : cols[index];
+        const patterns = makeLinePatterns(n, clues);
+        if (!patterns) return { changed: false, failed: true };
+
+        const candidates = [];
+        for (const pattern of patterns) {
+          let ok = true;
+          for (let i = 0; i < n; i++) {
+            const known = type === "row" ? work[index][i] : work[i][index];
+            if (known !== -1 && known !== pattern[i]) {
+              ok = false;
+              break;
+            }
+          }
+          if (ok) candidates.push(pattern);
+        }
+
+        if (candidates.length === 0) return { changed: false, failed: true };
+
+        let changed = false;
+        for (let i = 0; i < n; i++) {
+          const current = type === "row" ? work[index][i] : work[i][index];
+          if (current !== -1) continue;
+
+          const first = candidates[0][i];
+          let fixed = true;
+          for (let p = 1; p < candidates.length; p++) {
+            if (candidates[p][i] !== first) {
+              fixed = false;
+              break;
+            }
+          }
+
+          if (fixed) {
+            if (type === "row") work[index][i] = first;
+            else work[i][index] = first;
+            changed = true;
+            changedAny = true;
+            stats.basicFixes++;
+          }
+        }
+        return { changed, failed: false };
+      }
+
+      for (let loop = 0; loop < maxLoops; loop++) {
+        let changed = false;
+        for (let r = 0; r < n; r++) {
+          const result = applyLine("row", r);
+          if (result.failed) return { failed: true, changed: changedAny };
+          changed = changed || result.changed;
+        }
+        for (let c = 0; c < n; c++) {
+          const result = applyLine("col", c);
+          if (result.failed) return { failed: true, changed: changedAny };
+          changed = changed || result.changed;
+        }
+        if (!changed) return { failed: false, changed: changedAny };
+        stats.logicLoops++;
+      }
+      return { failed: false, changed: changedAny };
+    }
+
+    function solveWithLogic(n, rows, cols, options = {}) {
+      const allowProbe = options.allowProbe !== false;
+      const maxProbeRounds = options.maxProbeRounds || (n <= 10 ? 12 : n <= 15 ? 9 : 6);
+      const maxProbeCells = options.maxProbeCells || (n <= 10 ? 999 : n <= 15 ? 160 : 130);
+      const work = Array.from({ length: n }, () => Array(n).fill(-1));
+      const stats = {
+        basicFixes: 0,
+        probeFixes: 0,
+        contradictions: 0,
+        logicLoops: 0,
+        probeRounds: 0,
+        score: 0,
+        solved: false,
+        failed: false
+      };
+
+      const first = applyAllLineLogic(work, rows, cols, stats);
+      if (first.failed) {
+        stats.failed = true;
+        return { solved: false, grid: work, stats };
+      }
+
+      function solvedAll() {
+        return work.every(row => row.every(v => v !== -1));
+      }
+
+      if (allowProbe) {
+        for (let round = 0; round < maxProbeRounds && !solvedAll(); round++) {
+          let changed = false;
+          stats.probeRounds++;
+
+          const unknowns = [];
+          for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+              if (work[r][c] === -1) {
+                const edge = Math.min(r, c, n - 1 - r, n - 1 - c);
+                const center = Math.abs(r - (n - 1) / 2) + Math.abs(c - (n - 1) / 2);
+                unknowns.push({ r, c, rank: edge * 3 + center * 0.1 + Math.random() * 0.001 });
+              }
+            }
+          }
+          unknowns.sort((a, b) => a.rank - b.rank);
+
+          for (const p of unknowns.slice(0, maxProbeCells)) {
+            if (work[p.r][p.c] !== -1) continue;
+            let canBe = { 0: true, 1: true };
+
+            for (const value of [0, 1]) {
+              const trial = cloneWork(work);
+              trial[p.r][p.c] = value;
+              const trialStats = { basicFixes: 0, probeFixes: 0, contradictions: 0, logicLoops: 0 };
+              const result = applyAllLineLogic(trial, rows, cols, trialStats, n * 3);
+              if (result.failed) {
+                canBe[value] = false;
+                stats.contradictions++;
+              }
+            }
+
+            if (canBe[0] !== canBe[1]) {
+              work[p.r][p.c] = canBe[1] ? 1 : 0;
+              stats.probeFixes++;
+              changed = true;
+              const result = applyAllLineLogic(work, rows, cols, stats, n * 4);
+              if (result.failed) {
+                stats.failed = true;
+                return { solved: false, grid: work, stats };
+              }
+            }
+          }
+
+          if (!changed) break;
+        }
+      }
+
+      stats.solved = solvedAll();
+      stats.score = stats.basicFixes + stats.probeFixes * 5 + stats.contradictions * 4 + stats.probeRounds * 3 + stats.logicLoops;
+      return { solved: stats.solved, grid: work, stats };
+    }
+
+    function solvedGridMatches(work, grid) {
+      const n = grid.length;
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          if (work[r][c] !== (grid[r][c] ? 1 : 0)) return false;
+        }
+      }
+      return true;
+    }
+
+    function hasGoodClueBalance(grid, level) {
+      const n = grid.length;
+      const { rows, cols } = cluesForGrid(grid);
+      const all = rows.concat(cols);
+      const emptyLines = all.filter(clue => clue.length === 1 && clue[0] === 0).length;
+      const hugeRuns = all.filter(clue => clue.some(v => v >= Math.ceil(n * 0.72))).length;
+      const multiClue = all.filter(clue => clue.length >= 3).length;
+      const singles = all.filter(clue => clue.length === 1 && clue[0] > 0).length;
+
+      if (emptyLines > Math.max(1, Math.floor(n * 0.1))) return false;
+      if (hugeRuns > Math.max(1, Math.floor(n * 0.12))) return false;
+      if (level !== "easy" && multiClue < Math.floor(n * 0.7)) return false;
+      if (level === "expert" && singles > Math.floor(n * 0.5)) return false;
+      return true;
+    }
+
+    function emptyLineCount(grid) {
+      const n = grid.length;
+      let count = 0;
+      for (let r = 0; r < n; r++) {
+        if (!grid[r].some(Boolean)) count++;
+      }
+      for (let c = 0; c < n; c++) {
+        let has = false;
+        for (let r = 0; r < n; r++) if (grid[r][c]) has = true;
+        if (!has) count++;
+      }
+      return count;
+    }
+
+    function hasNoEmptyLines(grid) {
+      return emptyLineCount(grid) === 0;
+    }
+
+    function ensureNoEmptyLines(grid) {
+      const n = grid.length;
+      for (let r = 0; r < n; r++) {
+        if (!grid[r].some(Boolean)) grid[r][randInt(n)] = true;
+      }
+      for (let c = 0; c < n; c++) {
+        let has = false;
+        for (let r = 0; r < n; r++) if (grid[r][c]) has = true;
+        if (!has) grid[randInt(n)][c] = true;
+      }
+    }
+
+    function repairEmptyLines(grid) {
+      const n = grid.length;
+      const g = grid.map(row => row.slice());
+
+      for (let pass = 0; pass < 3 && emptyLineCount(g) > 0; pass++) {
+        const emptyRows = [];
+        const emptyCols = [];
+
+        for (let r = 0; r < n; r++) {
+          if (!g[r].some(Boolean)) emptyRows.push(r);
+        }
+        for (let c = 0; c < n; c++) {
+          let has = false;
+          for (let r = 0; r < n; r++) if (g[r][c]) has = true;
+          if (!has) emptyCols.push(c);
+        }
+
+        while (emptyRows.length && emptyCols.length) {
+          const r = emptyRows.pop();
+          const c = emptyCols.pop();
+          g[r][c] = true;
+          if (c + 1 < n) g[r][c + 1] = true;
+          else g[r][c - 1] = true;
+        }
+
+        for (const r of emptyRows) {
+          const c = randInt(n);
+          g[r][c] = true;
+          g[r][Math.max(0, Math.min(n - 1, c + (c < n - 1 ? 1 : -1)))] = true;
+        }
+
+        for (const c of emptyCols) {
+          const r = randInt(n);
+          g[r][c] = true;
+          g[Math.max(0, Math.min(n - 1, r + (r < n - 1 ? 1 : -1)))][c] = true;
+        }
+      }
+
+      return g;
+    }
+
+    function normalizeDensity(grid, density) {
+      const n = grid.length;
+      const target = Math.round(n * n * density);
+      let filled = countSolutionCells(grid);
+      const coords = [];
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) coords.push([r, c]);
+      shuffle(coords);
+
+      for (const [r, c] of coords) {
+        if (filled < target && !grid[r][c]) {
+          const neighbors = countNeighbors(grid, r, c);
+          if (neighbors > 0 || Math.random() < 0.38) {
+            grid[r][c] = true;
+            filled++;
+          }
+        } else if (filled > target && grid[r][c]) {
+          const neighbors = countNeighbors(grid, r, c);
+          if (neighbors <= 2 || Math.random() < 0.38) {
+            grid[r][c] = false;
+            filled--;
+          }
+        }
+      }
+
+      ensureNoEmptyLines(grid);
+    }
+
+    function paintPatch(grid, centerR, centerC, radius, chance) {
+      const n = grid.length;
+      for (let r = centerR - radius; r <= centerR + radius; r++) {
+        for (let c = centerC - radius; c <= centerC + radius; c++) {
+          if (r < 0 || r >= n || c < 0 || c >= n) continue;
+          const d = Math.abs(r - centerR) + Math.abs(c - centerC);
+          if (d <= radius && Math.random() < chance) grid[r][c] = true;
+        }
+      }
+    }
+
+    function addRandomWalks(grid, density, level) {
+      const n = grid.length;
+      const walks = Math.max(2, Math.floor(n * density * (level === "easy" ? 1.2 : 2.1)));
+      for (let w = 0; w < walks; w++) {
+        let r = randInt(n);
+        let c = randInt(n);
+        const steps = Math.max(3, Math.floor(n * (0.55 + Math.random() * 0.75)));
+        let dir = randInt(8);
+        for (let i = 0; i < steps; i++) {
+          const brush = Math.random() < (level === "easy" ? 0.2 : 0.34) ? 1 : 0;
+          paintPatch(grid, r, c, brush, brush ? 0.64 : 1);
+          if (Math.random() < 0.34) dir = (dir + randInt(3) + 7) % 8;
+          const dr = [-1, -1, 0, 1, 1, 1, 0, -1][dir];
+          const dc = [0, 1, 1, 1, 0, -1, -1, -1][dir];
+          r = Math.max(0, Math.min(n - 1, r + dr));
+          c = Math.max(0, Math.min(n - 1, c + dc));
+        }
+      }
+    }
+
+    function addNoisyTexture(grid, density, level) {
+      const n = grid.length;
+      const baseChance = density * (level === "easy" ? 0.72 : 0.9);
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          const wave = Math.sin(r * (0.9 + Math.random() * 0.15) + c * 0.45) +
+            Math.cos(c * 1.15 - r * 0.38);
+          if (Math.random() < baseChance * 0.38 || wave > 1.25 + Math.random() * 0.45) {
+            grid[r][c] = true;
+          }
+        }
+      }
+    }
+
+    function shapeVarietyScore(grid, level) {
+      const n = grid.length;
+      const total = n * n;
+      const filled = countSolutionCells(grid);
+      let transitions = 0;
+      let verticalMirrorMatches = 0;
+      const rowCounts = [];
+      const colCounts = [];
+
+      for (let r = 0; r < n; r++) {
+        let rowCount = 0;
+        for (let c = 0; c < n; c++) {
+          if (grid[r][c]) rowCount++;
+          if (c > 0 && grid[r][c] !== grid[r][c - 1]) transitions++;
+          if (grid[r][c] === grid[r][n - 1 - c]) verticalMirrorMatches++;
+        }
+        rowCounts.push(rowCount);
+      }
+
+      for (let c = 0; c < n; c++) {
+        let colCount = 0;
+        for (let r = 0; r < n; r++) {
+          if (grid[r][c]) colCount++;
+          if (r > 0 && grid[r][c] !== grid[r - 1][c]) transitions++;
+        }
+        colCounts.push(colCount);
+      }
+
+      const average = values => values.reduce((sum, v) => sum + v, 0) / values.length;
+      const variance = values => {
+        const avg = average(values);
+        return average(values.map(v => (v - avg) * (v - avg)));
+      };
+
+      const transitionRatio = transitions / Math.max(1, n * (n - 1) * 2);
+      const rowSpread = Math.sqrt(variance(rowCounts)) / n;
+      const colSpread = Math.sqrt(variance(colCounts)) / n;
+      const mirrorRatio = verticalMirrorMatches / total;
+      const densityTarget = settings[level]?.density || 0.42;
+      const densityFit = Math.max(0, 1 - Math.abs(filled / total - densityTarget) * 5);
+
+      let score = 0;
+      score += densityFit * 22;
+      score += Math.min(1, transitionRatio / 0.38) * 22;
+      score += Math.min(1, (rowSpread + colSpread) / 0.34) * 18;
+      score += Math.max(0, 1 - Math.abs(mirrorRatio - 0.5) * 2.6) * 18;
+      score += Math.random() * 8;
+      if (transitionRatio < 0.12) score -= 16;
+      if (mirrorRatio > 0.72) score -= 18;
+      if (level !== "easy" && rowSpread + colSpread < 0.11) score -= 10;
+      return score;
+    }
+
+    function shiftGrid(grid, rowShift, colShift) {
+      const n = grid.length;
+      const shifted = Array.from({ length: n }, () => Array(n).fill(false));
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          const fromR = (r - rowShift + n) % n;
+          const fromC = (c - colShift + n) % n;
+          shifted[r][c] = grid[fromR][fromC];
+        }
+      }
+      return shifted;
+    }
+
+    function edgeCounts(grid) {
+      const n = grid.length;
+      let top = 0;
+      let bottom = 0;
+      let left = 0;
+      let right = 0;
+      for (let i = 0; i < n; i++) {
+        if (grid[0][i]) top++;
+        if (grid[n - 1][i]) bottom++;
+        if (grid[i][0]) left++;
+        if (grid[i][n - 1]) right++;
+      }
+      return [top, bottom, left, right];
+    }
+
+    function expertEdgeScore(grid) {
+      const counts = edgeCounts(grid);
+      let score = 0;
+      for (const count of counts) {
+        if (count === 0) score -= 48;
+        else score += 18 - Math.abs(count - 4) * 2.2;
+      }
+      const emptyEdges = counts.filter(count => count === 0).length;
+      score -= emptyEdges * emptyEdges * 16;
+      return score;
+    }
+
+    function balanceExpertEdges(grid) {
+      const n = grid.length;
+      let best = grid;
+      let bestScore = -Infinity;
+      for (let rowShift = 0; rowShift < n; rowShift++) {
+        for (let colShift = 0; colShift < n; colShift++) {
+          const shifted = shiftGrid(grid, rowShift, colShift);
+          const score = expertEdgeScore(shifted) + Math.random() * 0.001;
+          if (score > bestScore) {
+            best = shifted;
+            bestScore = score;
+          }
+        }
+      }
+      return best;
+    }
+
+    function generateCandidatePattern(n, density, level) {
+      const grid = Array.from({ length: n }, () => Array(n).fill(false));
+      const styleCount = level === "easy" ? 3 : 5;
+      const style = randInt(styleCount);
+
+      if (style === 0 || style === 3) {
+        const strokes = level === "easy" ? Math.max(4, n) : level === "normal" ? n * 2 : level === "hard" ? n * 3 : n * 4;
+        for (let s = 0; s < strokes; s++) {
+          let r = randInt(n);
+          let c = randInt(n);
+          const len = 2 + randInt(Math.max(2, Math.floor(n / (level === "expert" ? 3 : 2))));
+          const dir = style === 3 ? [2, 3, randInt(4)][randInt(3)] : randInt(4);
+          for (let i = 0; i < len; i++) {
+            if (r >= 0 && r < n && c >= 0 && c < n) grid[r][c] = true;
+            if (dir === 0) c++;
+            else if (dir === 1) r++;
+            else if (dir === 2) { r++; c++; }
+            else { r++; c--; }
+            if (Math.random() < 0.24) {
+              if (Math.random() < 0.5) r += randInt(3) - 1;
+              else c += randInt(3) - 1;
+            }
+          }
+        }
+      }
+
+      if (style === 1 || style === 3 || Math.random() < 0.42) {
+        addRandomWalks(grid, density, level);
+      }
+
+      if (style === 2 || Math.random() < 0.26) {
+        addNoisyTexture(grid, density, level);
+      }
+
+      const blobs = Math.max(1, Math.floor(n * n * density / (level === "expert" ? 38 : 24)));
+      for (let b = 0; b < blobs; b++) {
+        const radius = 1 + randInt(level === "easy" ? 2 : 3);
+        paintPatch(grid, randInt(n), randInt(n), radius, level === "expert" ? 0.42 : 0.58);
+      }
+
+      if (style === 4) {
+        const ribbons = Math.max(1, Math.floor(n / 6));
+        for (let i = 0; i < ribbons; i++) {
+          const anchor = randInt(n);
+          for (let step = 0; step < n; step++) {
+            const r = (anchor + step) % n;
+            const c = Math.max(0, Math.min(n - 1, Math.floor(step * (0.55 + Math.random() * 0.9))));
+            paintPatch(grid, r, c, Math.random() < 0.35 ? 1 : 0, 0.8);
+          }
+        }
+      }
+
+      // 対称性はたまに混ぜる程度に抑え、毎回同じ印象になるのを避ける。
+      if (level !== "easy" && Math.random() < 0.18) {
+        for (let r = 0; r < n; r++) {
+          for (let c = 0; c < n; c++) {
+            if (grid[r][c] && Math.random() < 0.22) grid[r][n - 1 - c] = true;
+          }
+        }
+      }
+
+      normalizeDensity(grid, density);
+
+      return grid;
+    }
+
+    function countNeighbors(grid, r, c) {
+      let count = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr;
+          const nc = c + dc;
+          if (nr >= 0 && nr < grid.length && nc >= 0 && nc < grid.length && grid[nr][nc]) count++;
+        }
+      }
+      return count;
+    }
+
+    function fallbackPattern(n, density) {
+      const grid = Array.from({ length: n }, () => Array(n).fill(false));
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          const wave = Math.sin(r * 1.7 + c * 0.9) + Math.cos(c * 1.3 - r * 0.7);
+          const edge = Math.min(r, c, n - 1 - r, n - 1 - c);
+          grid[r][c] = wave > (edge % 3 === 0 ? 0.05 : 0.35);
+        }
+      }
+      const target = Math.round(n * n * density);
+      let filled = countSolutionCells(grid);
+      const coords = [];
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) coords.push([r, c]);
+      shuffle(coords);
+      for (const [r, c] of coords) {
+        if (filled < target && !grid[r][c]) { grid[r][c] = true; filled++; }
+        if (filled > target && grid[r][c]) { grid[r][c] = false; filled--; }
+      }
+      return grid;
+    }
+
+    const EXPERT_TEMPLATES = [
+      [
+        "....................",
+        "....................",
+        "....................",
+        "....###...####..#...",
+        "..####....###.#..#..",
+        "..###....####...##..",
+        "..###...###..#.###..",
+        "..#..#.###....###...",
+        "......###....###.#..",
+        "....####....#####...",
+        "..#.###.#..###...#..",
+        "...###...####....#..",
+        "..###....###....##..",
+        "..##...#####...###..",
+        "..##.#.###..#.###...",
+        "...##.###....###....",
+        ".....###....###.....",
+        "....................",
+        "....................",
+        "...................."
+      ],
+      [
+        "....................",
+        ".....###....###.....",
+        "....#...#..#...#....",
+        "...##.#.####.#.##...",
+        "..#..###....###..#..",
+        "..#.##..####..##.#..",
+        ".##.#.##....##.#.##.",
+        ".#..##.#.##.#.##..#.",
+        ".#.##..######..##.#.",
+        ".##..###.##.###..##.",
+        ".##..###.##.###..##.",
+        ".#.##..######..##.#.",
+        ".#..##.#.##.#.##..#.",
+        ".##.#.##....##.#.##.",
+        "..#.##..####..##.#..",
+        "..#..###....###..#..",
+        "...##.#.####.#.##...",
+        "....#...#..#...#....",
+        ".....###....###.....",
+        "...................."
+      ],
+      [
+        "....................",
+        "..###..##....##..##.",
+        ".#...#.#.#..#.#.#...",
+        ".#.###..######..###.",
+        "..#..##..#..#..##...",
+        ".###.#.##.##.##.#...",
+        ".#..##.#......#.##..",
+        "..##..###.##.###..#.",
+        ".#.#.#..######..#.#.",
+        ".##..##.#.##.#.##...",
+        "..##.##.#.##.#..##..",
+        "#.#..###.####.###...",
+        ".##.#...##..##...#..",
+        "..#.##.#.####.#.##..",
+        ".###..##..##..##..#.",
+        "..#.#..###..###..#..",
+        ".##..#.#.####.#..##.",
+        "...##..##....##..#..",
+        ".#..###...##...###..",
+        "...................."
+      ],
+      [
+        "....................",
+        ".........##.........",
+        "........####........",
+        ".......##..##.......",
+        "......##.##.##......",
+        ".....##......##.....",
+        "....####....####....",
+        "...##..######..##...",
+        "..##...##..##...##..",
+        "...##.###..###.##...",
+        "...##.###..###.##...",
+        "..##...##..##...##..",
+        "...##..######..##...",
+        "....####....####....",
+        ".....##......##.....",
+        "......##.##.##......",
+        ".......##..##.......",
+        "........####........",
+        ".........##.........",
+        "...................."
+      ],
+      [
+        "....................",
+        "..####...##...####..",
+        "..#..#..####..#..#..",
+        "..#..#..#..#..#..#..",
+        "..####..#..#..####..",
+        ".....#..####..#.....",
+        "..####........####..",
+        "..#....######....#..",
+        "..#.##.#....#.##.#..",
+        "....##.#.##.#.##....",
+        "....##.#.##.#.##....",
+        "..#.##.#....#.##.#..",
+        "..#....######....#..",
+        "..####........####..",
+        ".....#..####..#.....",
+        "..####..#..#..####..",
+        "..#..#..#..#..#..#..",
+        "..#..#..####..#..#..",
+        "..####...##...####..",
+        "...................."
+      ],
+      [
+        "....................",
+        "..###############...",
+        "..#.............#...",
+        "..#.###########.#...",
+        "..#.#.........#.#...",
+        "..#.#.#######.#.#...",
+        "..#.#.#.....#.#.#...",
+        "..#.#.#.###.#.#.#...",
+        "..#.#.#.#.#.#.#.#...",
+        "..#.#.#.###.#.#.#...",
+        "..#.#.#.....#.#.#...",
+        "..#.#.#######.#.#...",
+        "..#.#.........#.#...",
+        "..#.###########.#...",
+        "..#.............#...",
+        "..###############...",
+        "....................",
+        "....####....####....",
+        "....#..#....#..#....",
+        "....####....####...."
+      ],
+      [
+        "....................",
+        "........##..........",
+        "....##..##....##....",
+        "....##..####..##....",
+        "..####..####..####..",
+        "..####..##.##.####..",
+        "..##.##.##.##.##.##.",
+        "..##.##.##.##.##.##.",
+        "..##.##.##.##.##.##.",
+        "..################..",
+        "..#..##..##..##..#..",
+        "..#..##..##..##..#..",
+        "..################..",
+        "....##..####..##....",
+        "....##..#..#..##....",
+        "..####..####..####..",
+        "..#..#........#..#..",
+        "..####........####..",
+        "....................",
+        "...................."
+      ]
+    ];
+
+    const EXPERT_BALANCED_TEMPLATES = [
+      [
+        "#........##........#",
+        ".........##........#",
+        "#.......####........",
+        ".......##..##......#",
+        "#.....##.##.##......",
+        ".....##......##....#",
+        "##..####....####....",
+        ".#.##..######..##..#",
+        "#.##...##..##...##..",
+        "...##.###..###.##..#",
+        "#..##.###..###.##...",
+        "..##...##..##...##.#",
+        "#..##..######..##...",
+        "....####....####..##",
+        "#....##......##...#.",
+        "......##.##.##.....#",
+        "#......##..##.......",
+        "........####.......#",
+        "#........##.........",
+        "#........##........#"
+      ],
+      [
+        "#.####...##...####.#",
+        "..####...##...####.#",
+        "#.#..#..####..#..#..",
+        "..#..#..#..#..#..#.#",
+        "#.#####.#..#..####..",
+        ".....##.####.##....#",
+        "#.####.......######.",
+        "..#....######....###",
+        "#.#.##.#....#.##.#..",
+        "....##.#.##.#.##...#",
+        "#...##.#.##.#.##....",
+        "..#.##.#....#.##.#.#",
+        "#.#....######....#..",
+        "..####........####.#",
+        "##...#..####..#.....",
+        ".#####..#..#..####.#",
+        "#.#..#..#..#..#..#..",
+        "..#..#..####..#..#.#",
+        "#.####...##...####..",
+        "#.####...##...####.#"
+      ],
+      [
+        "#...####....####...#",
+        "..###############..#",
+        "#.#.............#...",
+        "..#.###########.#..#",
+        "#.#.#.........#.#...",
+        "..#.#.#######.#.#..#",
+        "#.#.#.#.....#.#.#...",
+        "..#.#.#.###.#.#.#..#",
+        "#.#.#.#.#.#.#.#.#...",
+        "..#.#.#.###.#.#.#..#",
+        "#.#.#.#.....#.#.#...",
+        "..#.#.#######.#.#..#",
+        "#.#.#.........#.#...",
+        "..#.###########.#..#",
+        "#.#.............#...",
+        "..################.#",
+        "##..####....####.##.",
+        ".#..####....####..##",
+        "#...#..#....#..#....",
+        "#...####....####...#"
+      ],
+      [
+        "#...##..##....##...#",
+        "........##.........#",
+        "#...##..##....##....",
+        "....##..####..##...#",
+        "#.####..####..####..",
+        "..####..##.##.####.#",
+        "#.##.##.##.##.##.##.",
+        "..##.##.##.##.##.###",
+        "#.##.##.##.##.##.##.",
+        "..################.#",
+        "#.#..##..##..##..#..",
+        "..#..##..##..##..#.#",
+        "#.################..",
+        "....##..####..##...#",
+        "#...##..#..#..##....",
+        ".#####..####..####.#",
+        "###..#........#..#..",
+        "..####........####.#",
+        "#...##..##....##....",
+        "#...##..##....##...#"
+      ]
+    ];
+
+    function templateToGrid(rows) {
+      return rows.map(row => [...row].map(ch => ch === "#"));
+    }
+
+    function transformExpertGrid(grid) {
+      let g = grid.map(row => row.slice());
+      if (Math.random() < 0.5) g = g.map(row => row.slice().reverse());
+      if (Math.random() < 0.5) g = g.slice().reverse();
+      if (Math.random() < 0.5) {
+        const n = g.length;
+        const t = Array.from({ length: n }, () => Array(n).fill(false));
+        for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) t[c][r] = g[r][c];
+        g = t;
+      }
+      return g;
+    }
+
+    function mutateTemplateGrid(grid, density) {
+      let g = grid.map(row => row.slice());
+      const n = g.length;
+
+      if (Math.random() < 0.82) {
+        const warped = Array.from({ length: n }, () => Array(n).fill(false));
+        let offset = randInt(5) - 2;
+        for (let r = 0; r < n; r++) {
+          if (Math.random() < 0.48) offset += randInt(3) - 1;
+          offset = Math.max(-3, Math.min(3, offset));
+          for (let c = 0; c < n; c++) {
+            const nc = c + offset;
+            if (g[r][c] && nc >= 0 && nc < n) warped[r][nc] = true;
+          }
+        }
+        g = warped;
+      }
+
+      const coords = [];
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) coords.push([r, c]);
+      shuffle(coords);
+
+      const flips = Math.floor(n * n * (0.018 + Math.random() * 0.026));
+      for (const [r, c] of coords.slice(0, flips)) {
+        const neighbors = countNeighbors(g, r, c);
+        if (g[r][c]) {
+          if (neighbors <= 4 || Math.random() < 0.18) g[r][c] = false;
+        } else if (neighbors > 0 || Math.random() < 0.2) {
+          g[r][c] = true;
+        }
+      }
+
+      if (Math.random() < 0.28) {
+        let r = randInt(n);
+        let c = randInt(n);
+        for (let i = 0; i < n * 0.7; i++) {
+          paintPatch(g, r, c, Math.random() < 0.28 ? 1 : 0, 0.72);
+          r = Math.max(0, Math.min(n - 1, r + randInt(3) - 1));
+          c = Math.max(0, Math.min(n - 1, c + randInt(3) - 1));
+        }
+      }
+
+      normalizeDensity(g, 0.3 + Math.random() * Math.max(0.04, density - 0.28));
+      return balanceExpertEdges(g);
+    }
+
+    function generateFastExpertPattern() {
+      statusEl.textContent = "問題を生成中...";
+      let fallback = null;
+      const pool = [];
+      const started = performance.now();
+
+      function tryCandidate(grid, rounds, cells) {
+        const candidate = balanceExpertEdges(repairEmptyLines(grid));
+        if (!hasNoEmptyLines(candidate)) return false;
+        const clues = cluesForGrid(candidate);
+        const checked = solveWithLogic(20, clues.rows, clues.cols, {
+          allowProbe: true,
+          maxProbeRounds: rounds,
+          maxProbeCells: cells
+        });
+        if (!checked.solved || !solvedGridMatches(checked.grid, candidate)) return false;
+        if (!fallback) fallback = candidate;
+        if (isRecentGeneratedGrid(candidate)) return true;
+        pool.push({
+          grid: candidate,
+          pickScore: checked.stats.score + expertEdgeScore(candidate) * 2.2 + shapeVarietyScore(candidate, "expert") * 0.75 + Math.random() * 8
+        });
+        return true;
+      }
+
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const base = EXPERT_BALANCED_TEMPLATES[randInt(EXPERT_BALANCED_TEMPLATES.length)];
+        const baseGrid = balanceExpertEdges(transformExpertGrid(templateToGrid(base)));
+        tryCandidate(baseGrid, 5, 120);
+
+        if (Math.random() < 0.22 && performance.now() - started < 450) {
+          tryCandidate(mutateTemplateGrid(baseGrid, settings.expert.density), 4, 80);
+        }
+
+        if (pool.length >= 3 && performance.now() - started > 120) break;
+        if (pool.length >= 5) break;
+      }
+
+      if (pool.length) return chooseVariedCandidate(pool);
+      return fallback || balanceExpertEdges(transformExpertGrid(templateToGrid(EXPERT_BALANCED_TEMPLATES[0])));
+    }
+
+    function chooseVariedCandidate(pool) {
+      const freshPool = pool.filter(item => !isRecentGeneratedGrid(item.grid));
+      const source = freshPool.length ? freshPool : pool;
+      source.sort((a, b) => b.pickScore - a.pickScore);
+      const top = source.slice(0, Math.min(6, source.length));
+      const min = Math.min(...top.map(item => item.pickScore));
+      const total = top.reduce((sum, item) => sum + Math.max(1, item.pickScore - min + 1), 0);
+      let needle = Math.random() * total;
+      for (const item of top) {
+        needle -= Math.max(1, item.pickScore - min + 1);
+        if (needle <= 0) return item.grid;
+      }
+      return top[0].grid;
+    }
+
+    function generateLogicalPattern(n, density, level) {
+      if (level === "expert") {
+        return generateFastExpertPattern();
+      }
+
+      const cfg = settings[level];
+      let best = null;
+      let bestPickScore = -Infinity;
+      const pool = [];
+      const start = performance.now();
+      const timeLimit = level === "expert" ? 3600 : level === "hard" ? 2600 : level === "normal" ? 1900 : 1300;
+
+      statusEl.textContent = "問題を生成中...";
+
+      for (let i = 0; i < cfg.tries; i++) {
+        if (performance.now() - start > timeLimit) break;
+        const useTemplateSeed = level === "expert" && i % 4 === 0;
+        const candidate = useTemplateSeed
+          ? mutateTemplateGrid(transformExpertGrid(templateToGrid(EXPERT_TEMPLATES[randInt(EXPERT_TEMPLATES.length)])), density)
+          : generateCandidatePattern(n, density, level);
+        if (!hasGoodClueBalance(candidate, level)) continue;
+        const clues = cluesForGrid(candidate);
+        const solved = solveWithLogic(n, clues.rows, clues.cols, {
+          allowProbe: true,
+          maxProbeRounds: level === "expert" ? 7 : level === "hard" ? 8 : 10,
+          maxProbeCells: level === "expert" ? 150 : level === "hard" ? 180 : 999
+        });
+        if (!solved.solved || !solvedGridMatches(solved.grid, candidate)) continue;
+
+        const logicScore = solved.stats.score;
+        const varietyScore = shapeVarietyScore(candidate, level);
+        const pickScore = logicScore + varietyScore * (level === "expert" ? 1.15 : 0.85) + Math.random() * 14;
+        if (pickScore > bestPickScore) {
+          best = candidate;
+          bestPickScore = pickScore;
+        }
+
+        if (logicScore >= cfg.minScore * 0.82) {
+          pool.push({ grid: candidate, logicScore, varietyScore, pickScore });
+          if (pool.length >= (level === "easy" ? 3 : 5) && performance.now() - start > timeLimit * 0.55) break;
+        }
+      }
+
+      if (pool.length) return chooseVariedCandidate(pool);
+      if (best) return best;
+
+      // 最後の保険。基本ロジック寄りでも、論理ソルバーで解けるものを返す。
+      for (let i = 0; i < 35; i++) {
+        const candidate = level === "expert" && i < 12 ? generateFastExpertPattern() : fallbackPattern(n, density);
+        const clues = cluesForGrid(candidate);
+        const solved = solveWithLogic(n, clues.rows, clues.cols, { allowProbe: true });
+        if (solved.solved && solvedGridMatches(solved.grid, candidate)) return candidate;
+      }
+
+      return fallbackPattern(n, density);
+    }
+
+    function computeClues() {
+      const clues = cluesForGrid(solution);
+      rowClues = clues.rows;
+      colClues = clues.cols;
+    }
+
+    function fitClueArea(cfg) {
+      // v14: 変形で縮小する方式をやめ、iframe内の実サイズから
+      // セルサイズとヒント欄サイズを逆算する。これにより下端・右端の切れを防ぐ。
+      fitStageToScreen(cfg);
+    }
+
+    function renderClues() {
+      rowCluesEl.innerHTML = "";
+      colCluesEl.innerHTML = "";
+
+      rowClues.forEach((clue, index) => {
+        const div = document.createElement("div");
+        div.className = "clue-row";
+        if (index % 5 === 0) div.classList.add("block-top");
+        if (index === size - 1) div.classList.add("block-bottom");
+        clue.forEach(num => {
+          const span = document.createElement("span");
+          span.textContent = String(num);
+          div.appendChild(span);
+        });
+        rowCluesEl.appendChild(div);
+      });
+
+      colClues.forEach((clue, index) => {
+        const div = document.createElement("div");
+        div.className = "clue-col";
+        if (index % 5 === 0) div.classList.add("block-left");
+        if (index === size - 1) div.classList.add("block-right");
+        clue.forEach(num => {
+          const span = document.createElement("span");
+          span.textContent = String(num);
+          div.appendChild(span);
+        });
+        colCluesEl.appendChild(div);
+      });
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      cells = [];
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          if (c % 5 === 0) cell.classList.add("block-left");
+          if (r % 5 === 0) cell.classList.add("block-top");
+          if (c === size - 1) cell.classList.add("block-right");
+          if (r === size - 1) cell.classList.add("block-bottom");
+          cell.dataset.r = String(r);
+          cell.dataset.c = String(c);
+          boardEl.appendChild(cell);
+          cells.push(cell);
+        }
+      }
+    }
+
+    function cellAt(r, c) {
+      return cells[r * size + c];
+    }
+
+    function updateCell(r, c) {
+      const cell = cellAt(r, c);
+      cell.classList.toggle("filled", state[r][c] === 1);
+      cell.classList.toggle("mark", state[r][c] === 2);
+    }
+
+    function getAC() {
+      if (!audioCtx) {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return null;
+          audioCtx = new AudioContext();
+        } catch (e) {
+          return null;
+        }
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    }
+
+    function beginInteraction() {
+      const ac = getAC();
+      if (!ac) return;
+      if (musicEnabled) startBgm();
+      updateAudioButtons();
+    }
+
+    function makeTone(freq, start, duration, gainValue, type = "sine", destination = null) {
+      const ac = getAC();
+      if (!ac) return;
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      const filter = ac.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(type === "square" ? 1800 : 2400, start);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, gainValue), start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(destination || ac.destination);
+      osc.start(start);
+      osc.stop(start + duration + 0.03);
+    }
+
+    function playCellSound(value, before = 0) {
+      if (!sfxEnabled) return;
+      const ac = getAC();
+      if (!ac) return;
+      const nowMs = performance.now();
+      if (nowMs - lastSoundAt < 24) return;
+      lastSoundAt = nowMs;
+      const now = ac.currentTime;
+
+      if (value === 1) {
+        makeTone(520, now, 0.07, 0.055, "triangle");
+        makeTone(780, now + 0.025, 0.08, 0.032, "sine");
+      } else if (value === 2) {
+        makeTone(360, now, 0.055, 0.045, "square");
+        makeTone(240, now + 0.025, 0.05, 0.032, "triangle");
+      } else {
+        makeTone(before === 2 ? 260 : 320, now, 0.075, 0.04, "sine");
+      }
+    }
+
+    function playWinSound() {
+      if (!sfxEnabled) return;
+      const ac = getAC();
+      if (!ac) return;
+      const now = ac.currentTime;
+      [523, 659, 784, 1046].forEach((f, i) => makeTone(f, now + i * 0.08, 0.16, 0.06, i % 2 ? "sine" : "triangle"));
+    }
+
+    function startBgm() {
+      const ac = getAC();
+      if (!ac || bgmPlaying || !musicEnabled) return;
+      bgmPlaying = true;
+      bgmStep = bgmStep || 0;
+      scheduleBgmStep();
+      bgmTimerId = setInterval(scheduleBgmStep, 185);
+    }
+
+    function stopBgm() {
+      bgmPlaying = false;
+      if (bgmTimerId) {
+        clearInterval(bgmTimerId);
+        bgmTimerId = null;
+      }
+    }
+
+    function scheduleBgmStep() {
+      if (!musicEnabled || !bgmPlaying) return;
+      const ac = getAC();
+      if (!ac) return;
+      const now = ac.currentTime;
+      const melody = [0, 2, 4, 7, 9, 7, 4, 2, 0, 2, 5, 7, 11, 9, 7, 4];
+      const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25, 783.99, 880.00, 987.77];
+      const idx = melody[bgmStep % melody.length] % scale.length;
+      const octaveLift = bgmStep % 32 >= 16 ? 1.0 : 0.5;
+      const freq = scale[idx] * octaveLift;
+      makeTone(freq, now, 0.115, 0.018, bgmStep % 4 === 0 ? "triangle" : "sine");
+      if (bgmStep % 4 === 0) makeTone(130.81 * (bgmStep % 16 === 0 ? 1 : 1.5), now, 0.28, 0.014, "triangle");
+      if (bgmStep % 8 === 6) makeTone(987.77, now + 0.04, 0.06, 0.009, "sine");
+      bgmStep++;
+    }
+
+    function updateAudioButtons() {
+      musicBtn.textContent = musicEnabled ? (bgmPlaying ? "BGM ON" : "BGM START") : "BGM OFF";
+      musicBtn.classList.toggle("on", musicEnabled);
+      musicBtn.classList.toggle("off", !musicEnabled);
+      sfxBtn.textContent = sfxEnabled ? "効果音 ON" : "効果音 OFF";
+      sfxBtn.classList.toggle("on", sfxEnabled);
+      sfxBtn.classList.toggle("off", !sfxEnabled);
+    }
+
+    function animateCell(r, c, value, before, mode = "cell") {
+      const cell = cellAt(r, c);
+      if (!cell) return;
+      const className = mode === "undo" ? "undo-pop" : value === 1 ? "fill-pop" : value === 2 ? "mark-pop" : "clear-pop";
+      cell.classList.remove("fill-pop", "mark-pop", "clear-pop", "undo-pop");
+      void cell.offsetWidth;
+      cell.classList.add(className);
+      setTimeout(() => cell.classList.remove(className), mode === "undo" ? 340 : 280);
+      burstAtCell(cell, value === 1 ? "fill" : value === 2 ? "mark" : "clear");
+    }
+
+    function burstAtCell(cell, type) {
+      if (!cell) return;
+      const count = type === "fill" ? 7 : type === "mark" ? 5 : 4;
+      for (let i = 0; i < count; i++) {
+        const spark = document.createElement("span");
+        spark.className = `spark ${type === "mark" ? "mark-spark" : type === "clear" ? "clear-spark" : ""}`;
+        const angle = (Math.PI * 2 * i / count) + Math.random() * 0.5;
+        const distance = 10 + Math.random() * 18;
+        spark.style.left = "50%";
+        spark.style.top = "50%";
+        spark.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+        spark.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+        cell.appendChild(spark);
+        setTimeout(() => spark.remove(), 650);
+      }
+    }
+
+    function setCell(r, c, value, silent = false) {
+      if (r < 0 || r >= size || c < 0 || c >= size) return;
+      if (state[r][c] === value) return;
+      const before = state[r][c];
+      state[r][c] = value;
+      updateCell(r, c);
+      if (!silent) {
+        animateCell(r, c, value, before);
+        playCellSound(value, before);
+      }
+    }
+
+
+    function pushUndoSnapshot() {
+      if (!state.length) return;
+      undoStack.push(state.map(row => row.slice()));
+      if (undoStack.length > 40) undoStack.shift();
+      updateUndoButton();
+    }
+
+    function updateUndoButton() {
+      if (!undoBtn) return;
+      undoBtn.disabled = undoStack.length === 0;
+      undoBtn.style.opacity = undoStack.length === 0 ? "0.55" : "1";
+    }
+
+    function undoLast() {
+      beginInteraction();
+      if (!undoStack.length || solved) return;
+      const previous = undoStack.pop();
+      const changed = [];
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (state[r][c] !== previous[r][c]) changed.push({ r, c, value: previous[r][c], before: state[r][c] });
+        }
+      }
+      state = previous.map(row => row.slice());
+      for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) updateCell(r, c);
+      changed.slice(0, 28).forEach(p => animateCell(p.r, p.c, p.value, p.before, "undo"));
+      if (changed.length) playCellSound(0, 1);
+      updateProgress();
+      updateClueStatus();
+      updateUndoButton();
+      showToast("一手戻しました");
+    }
+
+    function clearPreview() {
+      for (const cell of cells) cell.classList.remove("preview");
+    }
+
+    function linePoints(start, end) {
+      const points = [];
+      if (start.r === end.r) {
+        const from = Math.min(start.c, end.c);
+        const to = Math.max(start.c, end.c);
+        for (let c = from; c <= to; c++) points.push({ r: start.r, c });
+      } else if (start.c === end.c) {
+        const from = Math.min(start.r, end.r);
+        const to = Math.max(start.r, end.r);
+        for (let r = from; r <= to; r++) points.push({ r, c: start.c });
+      } else {
+        points.push(start);
+      }
+      return points;
+    }
+
+    function applyLine(start, end) {
+      clearPreview();
+      const points = linePoints(start, end);
+      let changed = false;
+
+      for (const p of points) {
+        const key = `${p.r},${p.c}`;
+        cellAt(p.r, p.c).classList.add("preview");
+        if (dragTouched.has(key)) continue;
+        dragTouched.add(key);
+
+        if (dragProtectConfirmed && dragInitialState && dragInitialState[p.r][p.c] !== 0) {
+          continue;
+        }
+
+        const before = state[p.r][p.c];
+        setCell(p.r, p.c, dragTargetState);
+        if (before !== state[p.r][p.c]) changed = true;
+      }
+
+      if (changed) {
+        updateProgress();
+        updateClueStatus();
+      }
+    }
+
+    function determineLock(start, raw) {
+      if (dragLock) return;
+      const dr = raw.r - start.r;
+      const dc = raw.c - start.c;
+      if (dr === 0 && dc === 0) return;
+      dragLock = Math.abs(dc) >= Math.abs(dr) ? "h" : "v";
+      statusEl.textContent = "";
+    }
+
+    function normalizeCurrent(start, raw) {
+      if (!dragLock) return raw;
+      return dragLock === "h" ? { r: start.r, c: raw.c } : { r: raw.r, c: start.c };
+    }
+
+    function getCellFromPoint(x, y) {
+      const element = document.elementFromPoint(x, y);
+      return element?.closest?.(".cell") || null;
+    }
+
+    function startDrag(cell, event) {
+      if (solved) return;
+      event.preventDefault();
+      beginInteraction();
+
+      const r = Number(cell.dataset.r);
+      const c = Number(cell.dataset.c);
+      const startValue = state[r][c];
+      const rightClick = event.button === 2;
+
+      pushUndoSnapshot();
+      dragging = true;
+      dragStart = { r, c };
+      dragLock = null;
+      dragTouched = new Set();
+      dragInitialState = state.map(row => row.slice());
+      dragProtectConfirmed = startValue === 0;
+      dragMoved = false;
+
+      if (startValue !== 0) {
+        dragTargetState = 0;
+      } else {
+        dragTargetState = rightClick ? 2 : 1;
+      }
+
+      boardEl.setPointerCapture?.(event.pointerId);
+      applyLine(dragStart, dragStart);
+    }
+
+    function moveDrag(event) {
+      if (!dragging || !dragStart) return;
+      event.preventDefault();
+      const cell = getCellFromPoint(event.clientX, event.clientY);
+      if (!cell || !boardEl.contains(cell)) return;
+      const raw = { r: Number(cell.dataset.r), c: Number(cell.dataset.c) };
+      if (raw.r !== dragStart.r || raw.c !== dragStart.c) dragMoved = true;
+      determineLock(dragStart, raw);
+      const current = normalizeCurrent(dragStart, raw);
+      applyLine(dragStart, current);
+    }
+
+    function endDrag(event) {
+      if (!dragging) return;
+      const wasClick = !dragMoved && dragStart;
+      const clicked = dragStart ? { ...dragStart } : null;
+
+      dragging = false;
+      dragStart = null;
+      dragLock = null;
+      dragTouched.clear();
+      clearPreview();
+      boardEl.releasePointerCapture?.(event.pointerId);
+
+      if (wasClick && clicked) {
+        setCell(clicked.r, clicked.c, dragTargetState);
+      }
+
+      dragInitialState = null;
+      dragProtectConfirmed = true;
+      dragMoved = false;
+      statusEl.textContent = "";
+      updateProgress();
+      updateClueStatus();
+      maybeSolved();
+    }
+
+    function clearAxisHover() {
+      for (const cell of cells) cell.classList.remove("axis-hover", "pointer-hover");
+      for (const el of rowCluesEl.children) el.classList.remove("axis-hover");
+      for (const el of colCluesEl.children) el.classList.remove("axis-hover");
+      hoverCell = null;
+    }
+
+    function updateAxisHover(cell) {
+      if (!cell || !boardEl.contains(cell)) {
+        clearAxisHover();
+        return;
+      }
+      const r = Number(cell.dataset.r);
+      const c = Number(cell.dataset.c);
+      if (hoverCell && Number(hoverCell.dataset.r) === r && Number(hoverCell.dataset.c) === c) return;
+
+      clearAxisHover();
+      hoverCell = cell;
+      for (let i = 0; i < size; i++) {
+        cellAt(r, i).classList.add("axis-hover");
+        cellAt(i, c).classList.add("axis-hover");
+      }
+      cell.classList.add("pointer-hover");
+      rowCluesEl.children[r]?.classList.add("axis-hover");
+      colCluesEl.children[c]?.classList.add("axis-hover");
+    }
+
+    function currentFilledCount() {
+      let total = 0;
+      for (const row of state) for (const v of row) if (v === 1) total++;
+      return total;
+    }
+
+    function updateProgress() {
+      filledCountEl.textContent = String(currentFilledCount());
+    }
+
+    function isLineDone(type, index) {
+      const actual = [];
+      for (let i = 0; i < size; i++) {
+        actual.push(type === "row" ? state[index][i] === 1 : state[i][index] === 1);
+      }
+      const clues = type === "row" ? rowClues[index] : colClues[index];
+      const actualClues = makeCluesForLine(actual);
+      return clues.length === actualClues.length && clues.every((v, i) => v === actualClues[i]);
+    }
+
+    function updateClueStatus() {
+      [...rowCluesEl.children].forEach((el, r) => el.classList.toggle("done", isLineDone("row", r)));
+      [...colCluesEl.children].forEach((el, c) => el.classList.toggle("done", isLineDone("col", c)));
+    }
+
+    function maybeSolved() {
+      if (solved) return;
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if ((state[r][c] === 1) !== solution[r][c]) return;
+        }
+      }
+      solved = true;
+      clearInterval(timerId);
+      statusEl.textContent = "完成しました！";
+      playWinSound();
+      showConfetti();
+      showToast("CLEAR! 完成です");
+      clearModal.classList.add("show");
+    }
+
+    function giveHint() {
+      if (solved) return;
+      beginInteraction();
+      pushUndoSnapshot();
+      const wrongFilled = [];
+      const missing = [];
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (state[r][c] === 1 && !solution[r][c]) wrongFilled.push({ r, c });
+          else if (solution[r][c] && state[r][c] !== 1) missing.push({ r, c });
+        }
+      }
+      let p;
+      if (wrongFilled.length) {
+        p = wrongFilled[randInt(wrongFilled.length)];
+        setCell(p.r, p.c, 0);
+        statusEl.textContent = `ヒント：${p.r + 1}行 ${p.c + 1}列を空白に戻しました。`;
+      } else if (missing.length) {
+        p = missing[randInt(missing.length)];
+        setCell(p.r, p.c, 1);
+        statusEl.textContent = `ヒント：${p.r + 1}行 ${p.c + 1}列を塗りました。`;
+      } else {
+        return;
+      }
+      cellAt(p.r, p.c).classList.add("selected");
+      setTimeout(() => cellAt(p.r, p.c).classList.remove("selected"), 800);
+      updateProgress();
+      updateClueStatus();
+      maybeSolved();
+    }
+
+
+    function showToast(text) {
+      if (!toastEl || !text || !text.trim()) return;
+      toastEl.textContent = text;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimerId);
+      toastTimerId = setTimeout(() => toastEl.classList.remove("show"), 2000);
+    }
+
+    function showConfetti() {
+      if (!fxLayer) return;
+      const colors = ["#e9b14a", "#287f8b", "#b85a43", "#f5d27d", "#6fbdb4"];
+      for (let i = 0; i < 54; i++) {
+        const piece = document.createElement("span");
+        piece.className = "confetti";
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.background = colors[randInt(colors.length)];
+        piece.style.animationDelay = `${Math.random() * 0.45}s`;
+        piece.style.transform = `rotate(${Math.random() * 180}deg)`;
+        fxLayer.appendChild(piece);
+        setTimeout(() => piece.remove(), 2600);
+      }
+    }
+
+    function updateTimer() {
+      const sec = Math.floor((Date.now() - startedAt) / 1000);
+      const m = String(Math.floor(sec / 60)).padStart(2, "0");
+      const s = String(sec % 60).padStart(2, "0");
+      timerEl.textContent = `${m}:${s}`;
+    }
+
+    function fitStageToScreen(cfg = settings[difficultyEl.value]) {
+      // 画面内に収めるため、CSS transformではなく実際のセルサイズを変更する。
+      // transform縮小は見た目だけ小さくなるため、環境によって下側が切れる原因になりやすい。
+      nonogramEl.style.transform = "none";
+
+      const appRect = document.querySelector(".app").getBoundingClientRect();
+      const stageRect = stageWrap.getBoundingClientRect();
+      const wrapStyle = getComputedStyle(stageWrap);
+      const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
+      const padY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
+
+      // iframeやWebViewで100vhの扱いが微妙にずれる環境に備え、
+      // 実際の表示可能領域からstageWrapの高さを再設定する。
+      const viewport = window.visualViewport;
+      const viewportTop = viewport ? viewport.offsetTop : 0;
+      const viewportHeight = viewport ? viewport.height : window.innerHeight;
+      const visibleBottom = Math.min(viewportTop + viewportHeight, appRect.bottom);
+      const safetyGap = Math.max(8, Math.min(16, viewportHeight * 0.016));
+      const correctedHeight = Math.max(112, Math.floor(visibleBottom - stageRect.top - safetyGap));
+      stageWrap.style.height = `${correctedHeight}px`;
+
+      const availableW = Math.max(96, Math.floor(stageWrap.clientWidth - padX));
+      const availableH = Math.max(96, Math.floor(stageWrap.clientHeight - padY));
+
+      const maxRowItems = Math.max(1, ...rowClues.map(c => c.length));
+      const maxColItems = Math.max(1, ...colClues.map(c => c.length));
+      const maxCellLimit = size <= 5 ? 92 : size <= 10 ? 72 : size <= 15 ? 48 : 36;
+      const maxCellByArea = Math.floor(Math.min(
+        maxCellLimit,
+        (availableW - 18) / size,
+        (availableH - 18) / size
+      ));
+
+      function metricsFor(cell) {
+        const digitW = Math.max(7, cell * 0.48);
+        const gap = Math.max(1, cell * 0.12);
+        const clueW = Math.ceil(Math.max(34, maxRowItems * digitW + Math.max(0, maxRowItems - 1) * gap + 12));
+        const clueH = Math.ceil(Math.max(34, maxColItems * digitW + Math.max(0, maxColItems - 1) * gap + 12));
+        return { cell, clueW, clueH, totalW: clueW + cell * size, totalH: clueH + cell * size };
+      }
+
+      let chosen = null;
+      for (let cell = Math.max(4, maxCellByArea); cell >= 4; cell--) {
+        const m = metricsFor(cell);
+        if (m.totalW <= availableW && m.totalH <= availableH) {
+          chosen = m;
+          break;
+        }
+      }
+
+      if (!chosen) {
+        // 極端に狭いiframeでも、とにかく全体が切れないことを優先する。
+        const rough = Math.max(5, Math.floor(Math.min(availableW, availableH) / (size + Math.max(maxRowItems, maxColItems) * 0.55 + 1)));
+        chosen = metricsFor(rough);
+        while ((chosen.totalW > availableW || chosen.totalH > availableH) && chosen.cell > 4) {
+          chosen = metricsFor(chosen.cell - 1);
+        }
+      }
+
+      nonogramEl.style.setProperty("--cell", `${chosen.cell}px`);
+      nonogramEl.style.setProperty("--clue-w", `${chosen.clueW}px`);
+      nonogramEl.style.setProperty("--clue-h", `${chosen.clueH}px`);
+      nonogramEl.style.setProperty("--n", String(size));
+    }
+
+    function newGame() {
+      const level = difficultyEl.value;
+      const cfg = settings[level];
+      size = cfg.size;
+      solved = false;
+      clearModal.classList.remove("show");
+
+      nonogramEl.style.setProperty("--n", String(size));
+      nonogramEl.style.setProperty("--cell", `${cfg.cell}px`);
+      nonogramEl.style.setProperty("--clue-w", `${cfg.clue}px`);
+      nonogramEl.style.setProperty("--clue-h", `${cfg.clue}px`);
+
+      // 重めの論理検証を行うため、描画を先に更新してから生成する。
+      statusEl.textContent = "論理問題を生成中...";
+      setTimeout(() => {
+        solution = generateLogicalPattern(size, cfg.density, level);
+        rememberGeneratedGrid(solution);
+        state = Array.from({ length: size }, () => Array(size).fill(0));
+        undoStack = [];
+        updateUndoButton();
+        computeClues();
+        renderClues();
+        renderBoard();
+        fitClueArea(cfg);
+        clearAxisHover();
+        fitStageToScreen(cfg);
+
+        targetCountEl.textContent = String(countSolutionCells(solution));
+        updateProgress();
+        updateClueStatus();
+        statusEl.textContent = "";
+
+        startedAt = Date.now();
+        clearInterval(timerId);
+        updateTimer();
+        timerId = setInterval(updateTimer, 1000);
+        requestAnimationFrame(() => requestAnimationFrame(() => { fitStageToScreen(cfg); scaleApp(); }));
+      }, 20);
+    }
+
+    boardEl.addEventListener("pointerdown", event => {
+      const cell = event.target.closest(".cell");
+      if (!cell) return;
+      updateAxisHover(cell);
+      startDrag(cell, event);
+    });
+
+    boardEl.addEventListener("pointermove", event => {
+      const cell = getCellFromPoint(event.clientX, event.clientY);
+      if (cell && boardEl.contains(cell)) updateAxisHover(cell);
+      moveDrag(event);
+    });
+
+    boardEl.addEventListener("pointerup", endDrag);
+    boardEl.addEventListener("pointercancel", event => {
+      endDrag(event);
+      clearAxisHover();
+    });
+    boardEl.addEventListener("pointerleave", () => {
+      if (!dragging) clearAxisHover();
+    });
+
+    document.addEventListener("contextmenu", event => {
+      if (event.target.closest(".app, .stage-wrap, .nonogram, .board, .cell")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
+
+    document.addEventListener("mousedown", event => {
+      if (event.button === 2 && event.target.closest(".app, .stage-wrap, .nonogram, .board, .cell")) {
+        event.preventDefault();
+      }
+    }, true);
+
+
+    function scaleApp() {
+      const root = document.getElementById("app-root");
+      if (!root) return;
+      root.style.transform = "scale(1)";
+      const naturalW = root.offsetWidth;
+      const naturalH = root.offsetHeight;
+      const scale = Math.min(
+        1,
+        window.innerWidth / (naturalW + 16),
+        window.innerHeight / (naturalH + 16)
+      );
+      root.style.transform = `scale(${scale})`;
+    }
+
+    function focusForIframe(event) {
+      const target = event?.target;
+      if (target && target.closest && target.closest("select, button, input, textarea")) return;
+      document.body.focus();
+    }
+
+    document.getElementById("newGame").addEventListener("click", event => { beginInteraction(); newGame(); });
+    document.getElementById("modalNew").addEventListener("click", event => { beginInteraction(); newGame(); });
+    document.getElementById("hintBtn").addEventListener("click", giveHint);
+    undoBtn.addEventListener("click", undoLast);
+    musicBtn.addEventListener("click", () => {
+      musicEnabled = !musicEnabled;
+      storageSet("nonogram.music", musicEnabled ? "1" : "0");
+      if (musicEnabled) beginInteraction();
+      else stopBgm();
+      updateAudioButtons();
+    });
+    sfxBtn.addEventListener("click", () => {
+      sfxEnabled = !sfxEnabled;
+      storageSet("nonogram.sfx", sfxEnabled ? "1" : "0");
+      if (sfxEnabled) beginInteraction();
+      updateAudioButtons();
+    });
+    difficultyEl.addEventListener("change", newGame);
+    window.addEventListener("resize", () => { fitStageToScreen(); scaleApp(); });
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", fitStageToScreen);
+
+    window.addEventListener("keydown", event => {
+      beginInteraction();
+      const key = event.key.toLowerCase();
+      if (key === "n") newGame();
+      if (key === "h") giveHint();
+      if ((event.ctrlKey || event.metaKey) && key === "z") {
+        event.preventDefault();
+        undoLast();
+      }
+    });
+
+    window.addEventListener("pointerdown", event => {
+      beginInteraction();
+      focusForIframe(event);
+    }, { capture: true });
+
+    document.body.focus();
+    updateAudioButtons();
+    updateUndoButton();
+    scaleApp();
+    newGame();
+    setTimeout(scaleApp, 80);
+  </script>
+</body>
+</html>
