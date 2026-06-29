@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HTML App Store</title>
+  <title>HTML App Gallery</title>
   <style>
     :root {
       color-scheme: light;
@@ -49,8 +49,7 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      margin: 0 calc(50% - 50vw);
-      padding: 12px calc(50vw - 50%);
+      padding: 12px 0;
       background: rgba(245, 247, 251, 0.78);
       border-bottom: 1px solid rgba(17, 24, 39, 0.06);
       backdrop-filter: blur(18px);
@@ -136,6 +135,44 @@
     .search input:focus {
       border-color: rgba(20, 126, 251, 0.55);
       box-shadow: 0 0 0 4px rgba(20, 126, 251, 0.13);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .language-switch {
+      display: inline-flex;
+      flex: 0 0 auto;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid rgba(17, 24, 39, 0.09);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .lang-button {
+      min-width: 44px;
+      min-height: 32px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: #475467;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .lang-button[aria-pressed="true"] {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 8px 18px rgba(20, 126, 251, 0.22);
     }
 
     .hero {
@@ -385,7 +422,7 @@
       text-overflow: ellipsis;
     }
 
-    .open-link {
+    .install-link {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -400,8 +437,8 @@
       font-weight: 800;
     }
 
-    .open-link:hover,
-    .open-link:focus {
+    .install-link:hover,
+    .install-link:focus {
       background: var(--accent);
       color: #ffffff;
       outline: none;
@@ -449,9 +486,18 @@
         flex-direction: column;
       }
 
+      .top-actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
       .search {
         width: 100%;
         flex-basis: auto;
+      }
+
+      .language-switch {
+        align-self: flex-start;
       }
 
       .hero {
@@ -502,20 +548,27 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="index.html" aria-label="HTML App Store ホーム">
+      <a class="brand" href="index.html" aria-label="HTML App Gallery ホーム" data-i18n-aria-label="brand.home">
         <span class="brand-mark">A</span>
         <span class="brand-text">
-          <span class="brand-title">HTML App Store</span>
-          <span class="brand-meta">Local HTML apps</span>
+          <span class="brand-title" data-i18n="brand.title">HTML App Gallery</span>
+          <span class="brand-meta" data-i18n="brand.meta">ローカル HTML アプリ</span>
         </span>
       </a>
 
-      <label class="search" for="searchInput">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-          <path d="m21 21-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <input id="searchInput" type="search" placeholder="アプリを検索" autocomplete="off">
-      </label>
+      <div class="top-actions">
+        <label class="search" for="searchInput">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="m21 21-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input id="searchInput" type="search" placeholder="アプリを検索" autocomplete="off" data-i18n-placeholder="search.placeholder">
+        </label>
+
+        <div class="language-switch" aria-label="言語切り替え" data-i18n-aria-label="language.switch">
+          <button class="lang-button" type="button" data-lang="ja" aria-pressed="true">日本語</button>
+          <button class="lang-button" type="button" data-lang="en" aria-pressed="false">English</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -523,29 +576,29 @@
     <section class="hero" aria-labelledby="storeTitle">
       <div class="featured">
         <div>
-          <p class="featured-kicker">Featured Collection</p>
-          <h1 id="storeTitle">HTML App Store</h1>
-          <p>ゲーム、パズル、便利ツールをひとつのページから起動できます。すべてブラウザだけで動くローカル HTML アプリです。</p>
+          <p class="featured-kicker" data-i18n="hero.kicker">おすすめコレクション</p>
+          <h1 id="storeTitle" data-i18n="brand.title">HTML App Gallery</h1>
+          <p data-i18n="hero.description">ゲーム、パズル、便利ツールをひとつのページから登録できます。MyShortcuts が HTML を取得してアプリとして追加します。</p>
         </div>
-        <a class="featured-action" href="Apps/sushi.html">寿司タイピングを開く <span aria-hidden="true">↗</span></a>
+        <a class="featured-action" href="Apps/sushi.html" data-i18n="hero.action">寿司タイピングをインストール</a>
       </div>
 
-      <div class="stats" aria-label="ストア概要">
+      <div class="stats" aria-label="ギャラリー概要" data-i18n-aria-label="stats.label">
         <div class="stat-card">
           <span class="stat-value">14</span>
-          <span class="stat-label">HTML アプリ</span>
+          <span class="stat-label" data-i18n="stats.apps">HTML アプリ</span>
         </div>
         <div class="stat-card">
           <span class="stat-value">4</span>
-          <span class="stat-label">カテゴリ</span>
+          <span class="stat-label" data-i18n="stats.categories">カテゴリ</span>
         </div>
         <div class="stat-card">
-          <span class="stat-value">0</span>
-          <span class="stat-label">インストール不要</span>
+          <span class="stat-value">HTML</span>
+          <span class="stat-label" data-i18n="stats.install">MyShortcuts 登録</span>
         </div>
         <div class="stat-card">
           <span class="stat-value">1</span>
-          <span class="stat-label">メインページ</span>
+          <span class="stat-label" data-i18n="stats.main">メインページ</span>
         </div>
       </div>
     </section>
@@ -553,272 +606,473 @@
     <section aria-labelledby="appsTitle">
       <div class="section-head">
         <div>
-          <h2 id="appsTitle">Apps</h2>
-          <p class="count"><span id="visibleCount">14</span> 件を表示中</p>
+          <h2 id="appsTitle" data-i18n="apps.heading">アプリ一覧</h2>
+          <p class="count" id="visibleCount">14 件を表示中</p>
         </div>
-        <div class="filters" aria-label="カテゴリ">
-          <button class="filter" type="button" data-filter="all" aria-pressed="true">すべて</button>
-          <button class="filter" type="button" data-filter="game" aria-pressed="false">ゲーム</button>
-          <button class="filter" type="button" data-filter="puzzle" aria-pressed="false">パズル</button>
-          <button class="filter" type="button" data-filter="board" aria-pressed="false">ボード</button>
-          <button class="filter" type="button" data-filter="tool" aria-pressed="false">ツール</button>
+        <div class="filters" aria-label="カテゴリ" data-i18n-aria-label="filters.label">
+          <button class="filter" type="button" data-filter="all" aria-pressed="true" data-i18n="filter.all">すべて</button>
+          <button class="filter" type="button" data-filter="game" aria-pressed="false" data-i18n="filter.game">ゲーム</button>
+          <button class="filter" type="button" data-filter="puzzle" aria-pressed="false" data-i18n="filter.puzzle">パズル</button>
+          <button class="filter" type="button" data-filter="board" aria-pressed="false" data-i18n="filter.board">ボード</button>
+          <button class="filter" type="button" data-filter="tool" aria-pressed="false" data-i18n="filter.tool">ツール</button>
         </div>
       </div>
 
       <div class="grid" id="appGrid">
-        <article class="app-card" data-category="puzzle" data-search="2048 number puzzle">
+        <article class="app-card" data-category="puzzle" data-search="2048 number puzzle 数字パズル">
           <div class="app-top">
             <img class="icon" src="Apps/2048.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>2048</h3>
-              <span>数字パズル</span>
+              <h3 data-i18n="app.2048.title">2048</h3>
+              <span data-i18n="app.2048.subtitle">数字パズル</span>
             </div>
           </div>
           <div class="app-body">
-            <p>同じ数字を合体させて 2048 を目指す、短時間で遊べる定番パズルです。</p>
+            <p data-i18n="app.2048.description">同じ数字を合体させて 2048 を目指す、短時間で遊べる定番パズルです。</p>
             <div class="app-footer">
-              <span class="tag">Puzzle</span>
-              <a class="open-link" href="Apps/2048.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.puzzle">パズル</span>
+              <a class="install-link" href="Apps/2048.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="board" data-search="5五将棋 shogi board cpu">
+        <article class="app-card" data-category="board" data-search="5五将棋 shogi board cpu ボード 将棋">
           <div class="app-top">
             <img class="icon" src="Apps/55shogi.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>5五将棋</h3>
-              <span>CPU 対戦</span>
+              <h3 data-i18n="app.55shogi.title">5五将棋</h3>
+              <span data-i18n="app.55shogi.subtitle">CPU 対戦</span>
             </div>
           </div>
           <div class="app-body">
-            <p>コンパクトな盤面で楽しめる将棋アプリ。CPU とテンポよく対局できます。</p>
+            <p data-i18n="app.55shogi.description">コンパクトな盤面で楽しめる将棋アプリ。CPU とテンポよく対局できます。</p>
             <div class="app-footer">
-              <span class="tag">Board</span>
-              <a class="open-link" href="Apps/55shogi.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.board">ボード</span>
+              <a class="install-link" href="Apps/55shogi.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="tool" data-search="calculator calc compact simple">
+        <article class="app-card" data-category="tool" data-search="calculator calc compact simple 電卓 計算 ツール">
           <div class="app-top">
             <img class="icon" src="Apps/calculator.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>Calculator</h3>
-              <span>計算ツール</span>
+              <h3 data-i18n="app.calculator.title">Calculator</h3>
+              <span data-i18n="app.calculator.subtitle">計算ツール</span>
             </div>
           </div>
           <div class="app-body">
-            <p>日常の計算をすばやく済ませるための、シンプルで見やすい電卓です。</p>
+            <p data-i18n="app.calculator.description">日常の計算をすばやく済ませるための、シンプルで見やすい電卓です。</p>
             <div class="app-footer">
-              <span class="tag">Tool</span>
-              <a class="open-link" href="Apps/calculator.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.tool">ツール</span>
+              <a class="install-link" href="Apps/calculator.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="board" data-search="chess board game cpu">
+        <article class="app-card" data-category="board" data-search="chess board game cpu チェス ボード">
           <div class="app-top">
             <img class="icon" src="Apps/chess.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>Chess</h3>
-              <span>人対コンピュータ</span>
+              <h3 data-i18n="app.chess.title">Chess</h3>
+              <span data-i18n="app.chess.subtitle">人対コンピュータ</span>
             </div>
           </div>
           <div class="app-body">
-            <p>HTML5 と JavaScript で動くチェス。盤面を開いてすぐ対局できます。</p>
+            <p data-i18n="app.chess.description">HTML5 と JavaScript で動くチェス。MyShortcuts に登録してすぐ対局できます。</p>
             <div class="app-footer">
-              <span class="tag">Board</span>
-              <a class="open-link" href="Apps/chess.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.board">ボード</span>
+              <a class="install-link" href="Apps/chess.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="tool" data-search="clock stylish time">
+        <article class="app-card" data-category="tool" data-search="clock stylish time 時計 ツール">
           <div class="app-top">
             <img class="icon" src="Apps/clock.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>Clock</h3>
-              <span>時計</span>
+              <h3 data-i18n="app.clock.title">Clock</h3>
+              <span data-i18n="app.clock.subtitle">時計</span>
             </div>
           </div>
           <div class="app-body">
-            <p>画面に置いて使いやすい、スタイリッシュな時計表示アプリです。</p>
+            <p data-i18n="app.clock.description">画面に置いて使いやすい、スタイリッシュな時計表示アプリです。</p>
             <div class="app-footer">
-              <span class="tag">Tool</span>
-              <a class="open-link" href="Apps/clock.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.tool">ツール</span>
+              <a class="install-link" href="Apps/clock.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="puzzle" data-search="nonogram picross puzzle">
+        <article class="app-card" data-category="puzzle" data-search="nonogram picross puzzle ノノグラム ロジック パズル">
           <div class="app-top">
             <img class="icon" src="Apps/nonogram.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>Nonogram</h3>
-              <span>ロジックパズル</span>
+              <h3 data-i18n="app.nonogram.title">Nonogram</h3>
+              <span data-i18n="app.nonogram.subtitle">ロジックパズル</span>
             </div>
           </div>
           <div class="app-body">
-            <p>数字のヒントを読み解いてマスを塗る、じっくり遊べるノノグラムです。</p>
+            <p data-i18n="app.nonogram.description">数字のヒントを読み解いてマスを塗る、じっくり遊べるノノグラムです。</p>
             <div class="app-footer">
-              <span class="tag">Puzzle</span>
-              <a class="open-link" href="Apps/nonogram.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.puzzle">パズル</span>
+              <a class="install-link" href="Apps/nonogram.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="board" data-search="othello reversi board cpu">
+        <article class="app-card" data-category="board" data-search="othello reversi board cpu オセロ ボード">
           <div class="app-top">
             <img class="icon" src="Apps/othello.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>Othello</h3>
+              <h3 data-i18n="app.othello.title">Othello</h3>
               <span>VS CPU</span>
             </div>
           </div>
           <div class="app-body">
-            <p>石を返して陣地を広げる定番ボードゲーム。CPU 対戦で楽しめます。</p>
+            <p data-i18n="app.othello.description">石を返して陣地を広げる定番ボードゲーム。CPU 対戦で楽しめます。</p>
             <div class="app-footer">
-              <span class="tag">Board</span>
-              <a class="open-link" href="Apps/othello.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.board">ボード</span>
+              <a class="install-link" href="Apps/othello.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="tool" data-search="qr code generator tool">
+        <article class="app-card" data-category="tool" data-search="qr code generator tool QRコード 作成 ツール">
           <div class="app-top">
             <img class="icon" src="Apps/qr-code.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>QR Code</h3>
-              <span>コード作成</span>
+              <h3 data-i18n="app.qr.title">QR Code</h3>
+              <span data-i18n="app.qr.subtitle">コード作成</span>
             </div>
           </div>
           <div class="app-body">
-            <p>URL やテキストから QR コードを作成する、手元で使える生成ツールです。</p>
+            <p data-i18n="app.qr.description">URL やテキストから QR コードを作成する、手元で使える生成ツールです。</p>
             <div class="app-footer">
-              <span class="tag">Tool</span>
-              <a class="open-link" href="Apps/qr-code.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.tool">ツール</span>
+              <a class="install-link" href="Apps/qr-code.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="game" data-search="shooting sky fortress arcade game">
+        <article class="app-card" data-category="game" data-search="shooting sky fortress arcade game シューティング ゲーム">
           <div class="app-top">
             <img class="icon" src="Apps/shooting.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>Sky Fortress</h3>
-              <span>シューティング</span>
+              <h3 data-i18n="app.shooting.title">Sky Fortress</h3>
+              <span data-i18n="app.shooting.subtitle">シューティング</span>
             </div>
           </div>
           <div class="app-body">
-            <p>空中戦をテーマにしたアーケード風シューティングゲームです。</p>
+            <p data-i18n="app.shooting.description">空中戦をテーマにしたアーケード風シューティングゲームです。</p>
             <div class="app-footer">
-              <span class="tag">Game</span>
-              <a class="open-link" href="Apps/shooting.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.game">ゲーム</span>
+              <a class="install-link" href="Apps/shooting.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="puzzle" data-search="sudoku number puzzle">
+        <article class="app-card" data-category="puzzle" data-search="sudoku number puzzle 数独 パズル">
           <div class="app-top">
             <img class="icon" src="Apps/sudoku.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>Sudoku</h3>
-              <span>数字パズル</span>
+              <h3 data-i18n="app.sudoku.title">Sudoku</h3>
+              <span data-i18n="app.sudoku.subtitle">数字パズル</span>
             </div>
           </div>
           <div class="app-body">
-            <p>数字を埋めて論理を組み立てる、集中して遊べる数独アプリです。</p>
+            <p data-i18n="app.sudoku.description">数字を埋めて論理を組み立てる、集中して遊べる数独アプリです。</p>
             <div class="app-footer">
-              <span class="tag">Puzzle</span>
-              <a class="open-link" href="Apps/sudoku.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.puzzle">パズル</span>
+              <a class="install-link" href="Apps/sudoku.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="game" data-search="suica fruit merge game">
+        <article class="app-card" data-category="game" data-search="suica fruit merge game フルーツ 合体 マージ ゲーム">
           <div class="app-top">
             <img class="icon" src="Apps/suica.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>フルーツ合体</h3>
-              <span>マージゲーム</span>
+              <h3 data-i18n="app.suica.title">フルーツ合体</h3>
+              <span data-i18n="app.suica.subtitle">マージゲーム</span>
             </div>
           </div>
           <div class="app-body">
-            <p>落ちてくるフルーツを合体させて大きく育てる、軽快な物理パズルです。</p>
+            <p data-i18n="app.suica.description">落ちてくるフルーツを合体させて大きく育てる、軽快な物理パズルです。</p>
             <div class="app-footer">
-              <span class="tag">Game</span>
-              <a class="open-link" href="Apps/suica.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.game">ゲーム</span>
+              <a class="install-link" href="Apps/suica.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="game" data-search="sushi typing game japanese">
+        <article class="app-card" data-category="game" data-search="sushi typing game japanese 寿司 タイピング ゲーム">
           <div class="app-top">
             <img class="icon" src="Apps/sushi.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>寿司タイピング</h3>
-              <span>タイピングゲーム</span>
+              <h3 data-i18n="app.sushi.title">寿司タイピング</h3>
+              <span data-i18n="app.sushi.subtitle">タイピングゲーム</span>
             </div>
           </div>
           <div class="app-body">
-            <p>流れてくる言葉を打ってスコアを伸ばす、テンポの良いタイピングゲームです。</p>
+            <p data-i18n="app.sushi.description">流れてくる言葉を打ってスコアを伸ばす、テンポの良いタイピングゲームです。</p>
             <div class="app-footer">
-              <span class="tag">Game</span>
-              <a class="open-link" href="Apps/sushi.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.game">ゲーム</span>
+              <a class="install-link" href="Apps/sushi.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="puzzle" data-search="tetris falling blocks puzzle game">
+        <article class="app-card" data-category="puzzle" data-search="tetris falling blocks puzzle game ブロック 落ちもの パズル">
           <div class="app-top">
             <img class="icon" src="Apps/tetris.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>Blocks</h3>
-              <span>落ちものパズル</span>
+              <h3 data-i18n="app.tetris.title">Blocks</h3>
+              <span data-i18n="app.tetris.subtitle">落ちものパズル</span>
             </div>
           </div>
           <div class="app-body">
-            <p>ブロックを積んでラインを消していく、定番スタイルのパズルゲームです。</p>
+            <p data-i18n="app.tetris.description">ブロックを積んでラインを消していく、定番スタイルのパズルゲームです。</p>
             <div class="app-footer">
-              <span class="tag">Puzzle</span>
-              <a class="open-link" href="Apps/tetris.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.puzzle">パズル</span>
+              <a class="install-link" href="Apps/tetris.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
 
-        <article class="app-card" data-category="tool" data-search="translator translation language tool">
+        <article class="app-card" data-category="tool" data-search="translator translation language tool 翻訳 言語 ツール">
           <div class="app-top">
             <img class="icon" src="Apps/translator.png" alt="" loading="lazy">
             <div class="app-title">
-              <h3>翻訳ツール</h3>
-              <span>言語ツール</span>
+              <h3 data-i18n="app.translator.title">翻訳ツール</h3>
+              <span data-i18n="app.translator.subtitle">言語ツール</span>
             </div>
           </div>
           <div class="app-body">
-            <p>テキストを別の言語へ変換するための、ブラウザで使える翻訳ツールです。</p>
+            <p data-i18n="app.translator.description">テキストを別の言語へ変換するための、ブラウザで使える翻訳ツールです。</p>
             <div class="app-footer">
-              <span class="tag">Tool</span>
-              <a class="open-link" href="Apps/translator.html">開く <span aria-hidden="true">↗</span></a>
+              <span class="tag" data-i18n="tag.tool">ツール</span>
+              <a class="install-link" href="Apps/translator.html" data-i18n="action.install">インストール</a>
             </div>
           </div>
         </article>
       </div>
 
-      <p class="empty" id="emptyState">該当するアプリが見つかりません。</p>
+      <p class="empty" id="emptyState" data-i18n="empty">該当するアプリが見つかりません。</p>
     </section>
   </main>
 
   <script>
+    const translations = {
+      ja: {
+        "document.title": "HTML App Gallery",
+        "brand.home": "HTML App Gallery ホーム",
+        "brand.title": "HTML App Gallery",
+        "brand.meta": "ローカル HTML アプリ",
+        "language.switch": "言語切り替え",
+        "search.placeholder": "アプリを検索",
+        "hero.kicker": "おすすめコレクション",
+        "hero.description": "ゲーム、パズル、便利ツールをひとつのページから登録できます。MyShortcuts が HTML を取得してアプリとして追加します。",
+        "hero.action": "寿司タイピングをインストール",
+        "stats.label": "ギャラリー概要",
+        "stats.apps": "HTML アプリ",
+        "stats.categories": "カテゴリ",
+        "stats.install": "MyShortcuts 登録",
+        "stats.main": "メインページ",
+        "apps.heading": "アプリ一覧",
+        "filters.label": "カテゴリ",
+        "filter.all": "すべて",
+        "filter.game": "ゲーム",
+        "filter.puzzle": "パズル",
+        "filter.board": "ボード",
+        "filter.tool": "ツール",
+        "count": "{count} 件を表示中",
+        "empty": "該当するアプリが見つかりません。",
+        "tag.game": "ゲーム",
+        "tag.puzzle": "パズル",
+        "tag.board": "ボード",
+        "tag.tool": "ツール",
+        "action.install": "インストール",
+        "app.2048.title": "2048",
+        "app.2048.subtitle": "数字パズル",
+        "app.2048.description": "同じ数字を合体させて 2048 を目指す、短時間で遊べる定番パズルです。",
+        "app.55shogi.title": "5五将棋",
+        "app.55shogi.subtitle": "CPU 対戦",
+        "app.55shogi.description": "コンパクトな盤面で楽しめる将棋アプリ。CPU とテンポよく対局できます。",
+        "app.calculator.title": "Calculator",
+        "app.calculator.subtitle": "計算ツール",
+        "app.calculator.description": "日常の計算をすばやく済ませるための、シンプルで見やすい電卓です。",
+        "app.chess.title": "Chess",
+        "app.chess.subtitle": "人対コンピュータ",
+        "app.chess.description": "HTML5 と JavaScript で動くチェス。MyShortcuts に登録してすぐ対局できます。",
+        "app.clock.title": "Clock",
+        "app.clock.subtitle": "時計",
+        "app.clock.description": "画面に置いて使いやすい、スタイリッシュな時計表示アプリです。",
+        "app.nonogram.title": "Nonogram",
+        "app.nonogram.subtitle": "ロジックパズル",
+        "app.nonogram.description": "数字のヒントを読み解いてマスを塗る、じっくり遊べるノノグラムです。",
+        "app.othello.title": "Othello",
+        "app.othello.description": "石を返して陣地を広げる定番ボードゲーム。CPU 対戦で楽しめます。",
+        "app.qr.title": "QR Code",
+        "app.qr.subtitle": "コード作成",
+        "app.qr.description": "URL やテキストから QR コードを作成する、手元で使える生成ツールです。",
+        "app.shooting.title": "Sky Fortress",
+        "app.shooting.subtitle": "シューティング",
+        "app.shooting.description": "空中戦をテーマにしたアーケード風シューティングゲームです。",
+        "app.sudoku.title": "Sudoku",
+        "app.sudoku.subtitle": "数字パズル",
+        "app.sudoku.description": "数字を埋めて論理を組み立てる、集中して遊べる数独アプリです。",
+        "app.suica.title": "フルーツ合体",
+        "app.suica.subtitle": "マージゲーム",
+        "app.suica.description": "落ちてくるフルーツを合体させて大きく育てる、軽快な物理パズルです。",
+        "app.sushi.title": "寿司タイピング",
+        "app.sushi.subtitle": "タイピングゲーム",
+        "app.sushi.description": "流れてくる言葉を打ってスコアを伸ばす、テンポの良いタイピングゲームです。",
+        "app.tetris.title": "Blocks",
+        "app.tetris.subtitle": "落ちものパズル",
+        "app.tetris.description": "ブロックを積んでラインを消していく、定番スタイルのパズルゲームです。",
+        "app.translator.title": "翻訳ツール",
+        "app.translator.subtitle": "言語ツール",
+        "app.translator.description": "テキストを別の言語へ変換するための、ブラウザで使える翻訳ツールです。"
+      },
+      en: {
+        "document.title": "HTML App Gallery",
+        "brand.home": "HTML App Gallery home",
+        "brand.title": "HTML App Gallery",
+        "brand.meta": "Local HTML apps",
+        "language.switch": "Language switcher",
+        "search.placeholder": "Search apps",
+        "hero.kicker": "Featured Collection",
+        "hero.description": "Register games, puzzles, and handy tools from one page. MyShortcuts fetches each HTML file and adds it as an app.",
+        "hero.action": "Install Sushi Typing",
+        "stats.label": "Gallery overview",
+        "stats.apps": "HTML apps",
+        "stats.categories": "Categories",
+        "stats.install": "MyShortcuts ready",
+        "stats.main": "Main page",
+        "apps.heading": "Apps",
+        "filters.label": "Categories",
+        "filter.all": "All",
+        "filter.game": "Games",
+        "filter.puzzle": "Puzzles",
+        "filter.board": "Board",
+        "filter.tool": "Tools",
+        "count": "Showing {count} apps",
+        "empty": "No matching apps found.",
+        "tag.game": "Game",
+        "tag.puzzle": "Puzzle",
+        "tag.board": "Board",
+        "tag.tool": "Tool",
+        "action.install": "Install",
+        "app.2048.title": "2048",
+        "app.2048.subtitle": "Number Puzzle",
+        "app.2048.description": "Merge matching numbers and try to reach 2048 in this quick classic puzzle.",
+        "app.55shogi.title": "5x5 Shogi",
+        "app.55shogi.subtitle": "CPU Match",
+        "app.55shogi.description": "A compact shogi app with a smaller board and fast CPU matches.",
+        "app.calculator.title": "Calculator",
+        "app.calculator.subtitle": "Calculation Tool",
+        "app.calculator.description": "A simple, readable calculator for quick everyday math.",
+        "app.chess.title": "Chess",
+        "app.chess.subtitle": "Player vs Computer",
+        "app.chess.description": "A browser-based chess app built with HTML5 and JavaScript, ready to register in MyShortcuts.",
+        "app.clock.title": "Clock",
+        "app.clock.subtitle": "Time Display",
+        "app.clock.description": "A stylish clock display that works well on a dedicated screen.",
+        "app.nonogram.title": "Nonogram",
+        "app.nonogram.subtitle": "Logic Puzzle",
+        "app.nonogram.description": "Read the numeric clues and fill the grid in this thoughtful nonogram puzzle.",
+        "app.othello.title": "Othello",
+        "app.othello.description": "A classic board game where you flip discs and compete against the CPU.",
+        "app.qr.title": "QR Code",
+        "app.qr.subtitle": "Code Generator",
+        "app.qr.description": "Generate QR codes from URLs or text directly in the browser.",
+        "app.shooting.title": "Sky Fortress",
+        "app.shooting.subtitle": "Shooting Game",
+        "app.shooting.description": "An arcade-style shooting game set in fast-moving aerial combat.",
+        "app.sudoku.title": "Sudoku",
+        "app.sudoku.subtitle": "Number Puzzle",
+        "app.sudoku.description": "Fill the grid and solve the logic in a focused Sudoku app.",
+        "app.suica.title": "Fruit Merge",
+        "app.suica.subtitle": "Merge Game",
+        "app.suica.description": "Drop and combine fruit into larger pieces in this lively physics puzzle.",
+        "app.sushi.title": "Sushi Typing",
+        "app.sushi.subtitle": "Typing Game",
+        "app.sushi.description": "Type the flowing words and build your score in a brisk typing game.",
+        "app.tetris.title": "Blocks",
+        "app.tetris.subtitle": "Falling Block Puzzle",
+        "app.tetris.description": "Stack blocks and clear lines in a familiar falling-block puzzle.",
+        "app.translator.title": "Translator",
+        "app.translator.subtitle": "Language Tool",
+        "app.translator.description": "Translate text into another language with a browser-based tool."
+      }
+    };
+
     const cards = Array.from(document.querySelectorAll(".app-card"));
     const filters = Array.from(document.querySelectorAll(".filter"));
+    const languageButtons = Array.from(document.querySelectorAll(".lang-button"));
     const input = document.querySelector("#searchInput");
     const visibleCount = document.querySelector("#visibleCount");
     const emptyState = document.querySelector("#emptyState");
+    const languageStorageKey = "html-app-gallery-language";
     let currentFilter = "all";
+    let currentLanguage = "ja";
 
     function normalize(value) {
       return value.trim().toLowerCase();
+    }
+
+    function safeGetStoredLanguage() {
+      try {
+        return localStorage.getItem(languageStorageKey);
+      } catch {
+        return null;
+      }
+    }
+
+    function safeSetStoredLanguage(language) {
+      try {
+        localStorage.setItem(languageStorageKey, language);
+      } catch {
+        // localStorage can be unavailable for some local file contexts.
+      }
+    }
+
+    function browserLanguage() {
+      const language = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+      return language.toLowerCase().startsWith("ja") ? "ja" : "en";
+    }
+
+    function text(key) {
+      return translations[currentLanguage][key] || translations.ja[key] || key;
+    }
+
+    function applyLanguage(language, shouldStore = true) {
+      currentLanguage = language === "ja" ? "ja" : "en";
+      document.documentElement.lang = currentLanguage;
+      document.title = text("document.title");
+
+      document.querySelectorAll("[data-i18n]").forEach((element) => {
+        element.textContent = text(element.dataset.i18n);
+      });
+
+      document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+        element.placeholder = text(element.dataset.i18nPlaceholder);
+      });
+
+      document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+        element.setAttribute("aria-label", text(element.dataset.i18nAriaLabel));
+      });
+
+      languageButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.lang === currentLanguage));
+      });
+
+      if (shouldStore) {
+        safeSetStoredLanguage(currentLanguage);
+      }
+
+      applyFilters();
     }
 
     function applyFilters() {
@@ -834,7 +1088,7 @@
         if (visible) shown += 1;
       });
 
-      visibleCount.textContent = String(shown);
+      visibleCount.textContent = text("count").replace("{count}", String(shown));
       emptyState.classList.toggle("visible", shown === 0);
     }
 
@@ -846,7 +1100,15 @@
       });
     });
 
+    languageButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        applyLanguage(button.dataset.lang);
+      });
+    });
+
     input.addEventListener("input", applyFilters);
+
+    applyLanguage(safeGetStoredLanguage() || browserLanguage(), false);
   </script>
 </body>
 </html>
