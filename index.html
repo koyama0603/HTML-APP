@@ -316,13 +316,11 @@
     .icon {
       width: 58px;
       height: 58px;
-      display: grid;
-      place-items: center;
       flex: 0 0 auto;
       border-radius: 8px;
-      color: #ffffff;
-      font-weight: 800;
-      font-size: 1.1rem;
+      display: block;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.86);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 12px 22px rgba(15, 23, 42, 0.16);
     }
 
@@ -570,7 +568,7 @@
       <div class="grid" id="appGrid">
         <article class="app-card" data-category="puzzle" data-search="2048 number puzzle">
           <div class="app-top">
-            <div class="icon icon-gold">2048</div>
+            <img class="icon" src="Apps/2048.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>2048</h3>
               <span>数字パズル</span>
@@ -587,7 +585,7 @@
 
         <article class="app-card" data-category="board" data-search="5五将棋 shogi board cpu">
           <div class="app-top">
-            <div class="icon icon-red">55</div>
+            <img class="icon" src="Apps/55shogi.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>5五将棋</h3>
               <span>CPU 対戦</span>
@@ -604,7 +602,7 @@
 
         <article class="app-card" data-category="tool" data-search="calculator calc compact simple">
           <div class="app-top">
-            <div class="icon icon-blue">CA</div>
+            <img class="icon" src="Apps/calculator.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>Calculator</h3>
               <span>計算ツール</span>
@@ -621,7 +619,7 @@
 
         <article class="app-card" data-category="board" data-search="chess board game cpu">
           <div class="app-top">
-            <div class="icon icon-ink">CH</div>
+            <img class="icon" src="Apps/chess.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>Chess</h3>
               <span>人対コンピュータ</span>
@@ -638,7 +636,7 @@
 
         <article class="app-card" data-category="tool" data-search="clock stylish time">
           <div class="app-top">
-            <div class="icon icon-teal">CL</div>
+            <img class="icon" src="Apps/clock.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>Clock</h3>
               <span>時計</span>
@@ -655,7 +653,7 @@
 
         <article class="app-card" data-category="puzzle" data-search="nonogram picross puzzle">
           <div class="app-top">
-            <div class="icon icon-violet">NO</div>
+            <img class="icon" src="Apps/nonogram.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>Nonogram</h3>
               <span>ロジックパズル</span>
@@ -672,7 +670,7 @@
 
         <article class="app-card" data-category="board" data-search="othello reversi board cpu">
           <div class="app-top">
-            <div class="icon icon-green">OT</div>
+            <img class="icon" src="Apps/othello.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>Othello</h3>
               <span>VS CPU</span>
@@ -689,7 +687,7 @@
 
         <article class="app-card" data-category="tool" data-search="qr code generator tool">
           <div class="app-top">
-            <div class="icon icon-ink">QR</div>
+            <img class="icon" src="Apps/qr-code.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>QR Code</h3>
               <span>コード作成</span>
@@ -706,7 +704,7 @@
 
         <article class="app-card" data-category="game" data-search="shooting sky fortress arcade game">
           <div class="app-top">
-            <div class="icon icon-blue">SF</div>
+            <img class="icon" src="Apps/shooting.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>Sky Fortress</h3>
               <span>シューティング</span>
@@ -723,7 +721,7 @@
 
         <article class="app-card" data-category="puzzle" data-search="sudoku number puzzle">
           <div class="app-top">
-            <div class="icon icon-teal">SU</div>
+            <img class="icon" src="Apps/sudoku.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>Sudoku</h3>
               <span>数字パズル</span>
@@ -740,7 +738,7 @@
 
         <article class="app-card" data-category="game" data-search="suica fruit merge game">
           <div class="app-top">
-            <div class="icon icon-pink">FR</div>
+            <img class="icon" src="Apps/suica.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>フルーツ合体</h3>
               <span>マージゲーム</span>
@@ -757,7 +755,7 @@
 
         <article class="app-card" data-category="game" data-search="sushi typing game japanese">
           <div class="app-top">
-            <div class="icon icon-red">ST</div>
+            <img class="icon" src="Apps/sushi.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>寿司タイピング</h3>
               <span>タイピングゲーム</span>
@@ -774,7 +772,7 @@
 
         <article class="app-card" data-category="puzzle" data-search="tetris falling blocks puzzle game">
           <div class="app-top">
-            <div class="icon icon-violet">BL</div>
+            <img class="icon" src="Apps/tetris.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>Blocks</h3>
               <span>落ちものパズル</span>
@@ -791,7 +789,7 @@
 
         <article class="app-card" data-category="tool" data-search="translator translation language tool">
           <div class="app-top">
-            <div class="icon icon-green">TR</div>
+            <img class="icon" src="Apps/translator.png" alt="" loading="lazy">
             <div class="app-title">
               <h3>翻訳ツール</h3>
               <span>言語ツール</span>
