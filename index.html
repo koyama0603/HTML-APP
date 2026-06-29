@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML App Store</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-strong: #ffffff;
+      --text: #111827;
+      --muted: #667085;
+      --line: rgba(17, 24, 39, 0.1);
+      --shadow: 0 18px 46px rgba(15, 23, 42, 0.12);
+      --accent: #147efb;
+      --accent-dark: #0863cf;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(20, 126, 251, 0.12), transparent 34rem),
+        linear-gradient(180deg, #fbfcff 0%, var(--bg) 46%, #eef3f8 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 22px 0 44px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      margin: 0 calc(50% - 50vw);
+      padding: 12px calc(50vw - 50%);
+      background: rgba(245, 247, 251, 0.78);
+      border-bottom: 1px solid rgba(17, 24, 39, 0.06);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar-inner {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #147efb, #42c2ff 56%, #33d17a);
+      color: #ffffff;
+      font-weight: 800;
+      box-shadow: 0 12px 26px rgba(20, 126, 251, 0.24);
+    }
+
+    .brand-text {
+      min-width: 0;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .brand-meta {
+      margin: 1px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .search {
+      position: relative;
+      width: min(360px, 42vw);
+      flex: 0 1 360px;
+    }
+
+    .search svg {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      transform: translateY(-50%);
+      color: #7b8794;
+      pointer-events: none;
+    }
+
+    .search input {
+      width: 100%;
+      height: 40px;
+      border: 1px solid rgba(17, 24, 39, 0.09);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.78);
+      padding: 0 14px 0 39px;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    }
+
+    .search input:focus {
+      border-color: rgba(20, 126, 251, 0.55);
+      box-shadow: 0 0 0 4px rgba(20, 126, 251, 0.13);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      align-items: stretch;
+      padding: 34px 0 22px;
+    }
+
+    .featured {
+      min-height: 254px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(140deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0)),
+        linear-gradient(135deg, #071b3d 0%, #124a8e 48%, #29b67f 100%);
+      color: #ffffff;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .featured-kicker {
+      margin: 0 0 10px;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .featured h1 {
+      margin: 0;
+      max-width: 12ch;
+      font-size: 2.55rem;
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    .featured p {
+      max-width: 48rem;
+      margin: 14px 0 0;
+      color: rgba(255, 255, 255, 0.83);
+      font-size: 1rem;
+      line-height: 1.75;
+    }
+
+    .featured-action {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      margin-top: 24px;
+      padding: 0 16px;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #0b5fc4;
+      font-weight: 750;
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat-card {
+      min-height: 120px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 14px 38px rgba(15, 23, 42, 0.08);
+    }
+
+    .stat-value {
+      display: block;
+      font-size: 1.8rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-label {
+      display: block;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 10px 0 16px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      letter-spacing: 0;
+    }
+
+    .count {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.74);
+      color: #374151;
+      padding: 0 12px;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .filter[aria-pressed="true"] {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 10px 24px rgba(20, 126, 251, 0.22);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .app-card {
+      min-height: 232px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-strong);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+      overflow: hidden;
+      transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    }
+
+    .app-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(20, 126, 251, 0.28);
+      box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+    }
+
+    .app-card[hidden] {
+      display: none;
+    }
+
+    .app-top {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 18px 18px 12px;
+    }
+
+    .icon {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 1.1rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 12px 22px rgba(15, 23, 42, 0.16);
+    }
+
+    .icon-blue { background: linear-gradient(135deg, #147efb, #55b9ff); }
+    .icon-green { background: linear-gradient(135deg, #0f9f6e, #77d970); }
+    .icon-red { background: linear-gradient(135deg, #e23d57, #ff8b5c); }
+    .icon-violet { background: linear-gradient(135deg, #6658d3, #c061cb); }
+    .icon-gold { background: linear-gradient(135deg, #d98b13, #f6d365); color: #2f2209; }
+    .icon-teal { background: linear-gradient(135deg, #0f8b8d, #5eead4); }
+    .icon-ink { background: linear-gradient(135deg, #1f2937, #64748b); }
+    .icon-pink { background: linear-gradient(135deg, #c026d3, #fb7185); }
+
+    .app-title {
+      min-width: 0;
+    }
+
+    .app-title h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .app-title span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .app-body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      padding: 0 18px 18px;
+    }
+
+    .app-body p {
+      flex: 1;
+      margin: 0 0 16px;
+      color: #4b5563;
+      font-size: 0.94rem;
+      line-height: 1.58;
+    }
+
+    .app-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-top: 1px solid rgba(17, 24, 39, 0.07);
+      padding-top: 14px;
+    }
+
+    .tag {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .open-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 34px;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      background: rgba(20, 126, 251, 0.12);
+      color: var(--accent-dark);
+      padding: 0 12px;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .open-link:hover,
+    .open-link:focus {
+      background: var(--accent);
+      color: #ffffff;
+      outline: none;
+    }
+
+    .empty {
+      display: none;
+      margin: 22px 0 0;
+      padding: 24px;
+      border: 1px dashed rgba(17, 24, 39, 0.18);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty.visible {
+      display: block;
+    }
+
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        width: min(100% - 22px, 1180px);
+        padding-top: 14px;
+      }
+
+      .topbar {
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+
+      .topbar-inner {
+        width: min(100% - 22px, 1180px);
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .search {
+        width: 100%;
+        flex-basis: auto;
+      }
+
+      .hero {
+        padding-top: 22px;
+      }
+
+      .featured {
+        min-height: 232px;
+        padding: 24px;
+      }
+
+      .featured h1 {
+        max-width: none;
+        font-size: 2rem;
+      }
+
+      .section-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .filters {
+        justify-content: flex-start;
+      }
+
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 520px) {
+      .stats,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .app-card {
+        min-height: 0;
+      }
+
+      .brand-title,
+      .brand-meta {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="index.html" aria-label="HTML App Store ホーム">
+        <span class="brand-mark">A</span>
+        <span class="brand-text">
+          <span class="brand-title">HTML App Store</span>
+          <span class="brand-meta">Local HTML apps</span>
+        </span>
+      </a>
+
+      <label class="search" for="searchInput">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+          <path d="m21 21-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="アプリを検索" autocomplete="off">
+      </label>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero" aria-labelledby="storeTitle">
+      <div class="featured">
+        <div>
+          <p class="featured-kicker">Featured Collection</p>
+          <h1 id="storeTitle">HTML App Store</h1>
+          <p>ゲーム、パズル、便利ツールをひとつのページから起動できます。すべてブラウザだけで動くローカル HTML アプリです。</p>
+        </div>
+        <a class="featured-action" href="Apps/sushi.html">寿司タイピングを開く <span aria-hidden="true">↗</span></a>
+      </div>
+
+      <div class="stats" aria-label="ストア概要">
+        <div class="stat-card">
+          <span class="stat-value">14</span>
+          <span class="stat-label">HTML アプリ</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">4</span>
+          <span class="stat-label">カテゴリ</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">0</span>
+          <span class="stat-label">インストール不要</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">1</span>
+          <span class="stat-label">メインページ</span>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="appsTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="appsTitle">Apps</h2>
+          <p class="count"><span id="visibleCount">14</span> 件を表示中</p>
+        </div>
+        <div class="filters" aria-label="カテゴリ">
+          <button class="filter" type="button" data-filter="all" aria-pressed="true">すべて</button>
+          <button class="filter" type="button" data-filter="game" aria-pressed="false">ゲーム</button>
+          <button class="filter" type="button" data-filter="puzzle" aria-pressed="false">パズル</button>
+          <button class="filter" type="button" data-filter="board" aria-pressed="false">ボード</button>
+          <button class="filter" type="button" data-filter="tool" aria-pressed="false">ツール</button>
+        </div>
+      </div>
+
+      <div class="grid" id="appGrid">
+        <article class="app-card" data-category="puzzle" data-search="2048 number puzzle">
+          <div class="app-top">
+            <div class="icon icon-gold">2048</div>
+            <div class="app-title">
+              <h3>2048</h3>
+              <span>数字パズル</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>同じ数字を合体させて 2048 を目指す、短時間で遊べる定番パズルです。</p>
+            <div class="app-footer">
+              <span class="tag">Puzzle</span>
+              <a class="open-link" href="Apps/2048.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="board" data-search="5五将棋 shogi board cpu">
+          <div class="app-top">
+            <div class="icon icon-red">55</div>
+            <div class="app-title">
+              <h3>5五将棋</h3>
+              <span>CPU 対戦</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>コンパクトな盤面で楽しめる将棋アプリ。CPU とテンポよく対局できます。</p>
+            <div class="app-footer">
+              <span class="tag">Board</span>
+              <a class="open-link" href="Apps/55shogi.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="tool" data-search="calculator calc compact simple">
+          <div class="app-top">
+            <div class="icon icon-blue">CA</div>
+            <div class="app-title">
+              <h3>Calculator</h3>
+              <span>計算ツール</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>日常の計算をすばやく済ませるための、シンプルで見やすい電卓です。</p>
+            <div class="app-footer">
+              <span class="tag">Tool</span>
+              <a class="open-link" href="Apps/calculator.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="board" data-search="chess board game cpu">
+          <div class="app-top">
+            <div class="icon icon-ink">CH</div>
+            <div class="app-title">
+              <h3>Chess</h3>
+              <span>人対コンピュータ</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>HTML5 と JavaScript で動くチェス。盤面を開いてすぐ対局できます。</p>
+            <div class="app-footer">
+              <span class="tag">Board</span>
+              <a class="open-link" href="Apps/chess.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="tool" data-search="clock stylish time">
+          <div class="app-top">
+            <div class="icon icon-teal">CL</div>
+            <div class="app-title">
+              <h3>Clock</h3>
+              <span>時計</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>画面に置いて使いやすい、スタイリッシュな時計表示アプリです。</p>
+            <div class="app-footer">
+              <span class="tag">Tool</span>
+              <a class="open-link" href="Apps/clock.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="puzzle" data-search="nonogram picross puzzle">
+          <div class="app-top">
+            <div class="icon icon-violet">NO</div>
+            <div class="app-title">
+              <h3>Nonogram</h3>
+              <span>ロジックパズル</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>数字のヒントを読み解いてマスを塗る、じっくり遊べるノノグラムです。</p>
+            <div class="app-footer">
+              <span class="tag">Puzzle</span>
+              <a class="open-link" href="Apps/nonogram.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="board" data-search="othello reversi board cpu">
+          <div class="app-top">
+            <div class="icon icon-green">OT</div>
+            <div class="app-title">
+              <h3>Othello</h3>
+              <span>VS CPU</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>石を返して陣地を広げる定番ボードゲーム。CPU 対戦で楽しめます。</p>
+            <div class="app-footer">
+              <span class="tag">Board</span>
+              <a class="open-link" href="Apps/othello.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="tool" data-search="qr code generator tool">
+          <div class="app-top">
+            <div class="icon icon-ink">QR</div>
+            <div class="app-title">
+              <h3>QR Code</h3>
+              <span>コード作成</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>URL やテキストから QR コードを作成する、手元で使える生成ツールです。</p>
+            <div class="app-footer">
+              <span class="tag">Tool</span>
+              <a class="open-link" href="Apps/qr-code.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="game" data-search="shooting sky fortress arcade game">
+          <div class="app-top">
+            <div class="icon icon-blue">SF</div>
+            <div class="app-title">
+              <h3>Sky Fortress</h3>
+              <span>シューティング</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>空中戦をテーマにしたアーケード風シューティングゲームです。</p>
+            <div class="app-footer">
+              <span class="tag">Game</span>
+              <a class="open-link" href="Apps/shooting.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="puzzle" data-search="sudoku number puzzle">
+          <div class="app-top">
+            <div class="icon icon-teal">SU</div>
+            <div class="app-title">
+              <h3>Sudoku</h3>
+              <span>数字パズル</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>数字を埋めて論理を組み立てる、集中して遊べる数独アプリです。</p>
+            <div class="app-footer">
+              <span class="tag">Puzzle</span>
+              <a class="open-link" href="Apps/sudoku.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="game" data-search="suica fruit merge game">
+          <div class="app-top">
+            <div class="icon icon-pink">FR</div>
+            <div class="app-title">
+              <h3>フルーツ合体</h3>
+              <span>マージゲーム</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>落ちてくるフルーツを合体させて大きく育てる、軽快な物理パズルです。</p>
+            <div class="app-footer">
+              <span class="tag">Game</span>
+              <a class="open-link" href="Apps/suica.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="game" data-search="sushi typing game japanese">
+          <div class="app-top">
+            <div class="icon icon-red">ST</div>
+            <div class="app-title">
+              <h3>寿司タイピング</h3>
+              <span>タイピングゲーム</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>流れてくる言葉を打ってスコアを伸ばす、テンポの良いタイピングゲームです。</p>
+            <div class="app-footer">
+              <span class="tag">Game</span>
+              <a class="open-link" href="Apps/sushi.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="puzzle" data-search="tetris falling blocks puzzle game">
+          <div class="app-top">
+            <div class="icon icon-violet">BL</div>
+            <div class="app-title">
+              <h3>Blocks</h3>
+              <span>落ちものパズル</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>ブロックを積んでラインを消していく、定番スタイルのパズルゲームです。</p>
+            <div class="app-footer">
+              <span class="tag">Puzzle</span>
+              <a class="open-link" href="Apps/tetris.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="app-card" data-category="tool" data-search="translator translation language tool">
+          <div class="app-top">
+            <div class="icon icon-green">TR</div>
+            <div class="app-title">
+              <h3>翻訳ツール</h3>
+              <span>言語ツール</span>
+            </div>
+          </div>
+          <div class="app-body">
+            <p>テキストを別の言語へ変換するための、ブラウザで使える翻訳ツールです。</p>
+            <div class="app-footer">
+              <span class="tag">Tool</span>
+              <a class="open-link" href="Apps/translator.html">開く <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="empty" id="emptyState">該当するアプリが見つかりません。</p>
+    </section>
+  </main>
+
+  <script>
+    const cards = Array.from(document.querySelectorAll(".app-card"));
+    const filters = Array.from(document.querySelectorAll(".filter"));
+    const input = document.querySelector("#searchInput");
+    const visibleCount = document.querySelector("#visibleCount");
+    const emptyState = document.querySelector("#emptyState");
+    let currentFilter = "all";
+
+    function normalize(value) {
+      return value.trim().toLowerCase();
+    }
+
+    function applyFilters() {
+      const term = normalize(input.value);
+      let shown = 0;
+
+      cards.forEach((card) => {
+        const matchesCategory = currentFilter === "all" || card.dataset.category === currentFilter;
+        const searchable = normalize(`${card.textContent} ${card.dataset.search || ""}`);
+        const matchesTerm = term === "" || searchable.includes(term);
+        const visible = matchesCategory && matchesTerm;
+        card.hidden = !visible;
+        if (visible) shown += 1;
+      });
+
+      visibleCount.textContent = String(shown);
+      emptyState.classList.toggle("visible", shown === 0);
+    }
+
+    filters.forEach((button) => {
+      button.addEventListener("click", () => {
+        currentFilter = button.dataset.filter;
+        filters.forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+        applyFilters();
+      });
+    });
+
+    input.addEventListener("input", applyFilters);
+  </script>
+</body>
+</html>
