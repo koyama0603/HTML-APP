@@ -1,0 +1,2490 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Fall 3 Lanes</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101416;
+      --panel: #182023;
+      --panel-2: #202a2d;
+      --line: #3b4b4d;
+      --text: #f1f4ee;
+      --muted: #a8b5ad;
+      --cyan: #61bfd1;
+      --lime: #8fc35d;
+      --gold: #e0b34e;
+      --red: #df6557;
+      --ink: #0b0e10;
+      --shadow: rgba(0, 0, 0, 0.34);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(97, 191, 209, 0.08), transparent 42%),
+        radial-gradient(circle at 82% 8%, rgba(224, 179, 78, 0.12), transparent 25%),
+        var(--bg);
+      color: var(--text);
+      font-family:
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1600px, 100%);
+      height: 100vh;
+      height: 100dvh;
+      margin: 0 auto;
+      padding: clamp(8px, 1.6vh, 14px);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: clamp(8px, 1.4vh, 12px);
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3.5vw, 2.6rem);
+      line-height: 1;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .phase {
+      min-width: 92px;
+      padding: 6px 10px;
+      border: 1px solid rgba(97, 191, 209, 0.46);
+      border-radius: 999px;
+      background: rgba(97, 191, 209, 0.1);
+      color: #b8edf4;
+      font-size: 0.76rem;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    select {
+      min-height: 42px;
+      max-width: 188px;
+      padding: 0 38px 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, #263135, #1b2427);
+      color: var(--text);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    select option {
+      background: #182023;
+      color: #f1f4ee;
+    }
+
+    .icon-button,
+    .answer-button,
+    .start-button {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: 0 10px 28px var(--shadow);
+      transition:
+        transform 120ms ease,
+        border-color 120ms ease,
+        background 120ms ease;
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 42px;
+      display: inline-grid;
+      place-items: center;
+      background: linear-gradient(180deg, #283438, #1a2225);
+    }
+
+    .icon-button svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .icon-button:hover,
+    .answer-button:hover,
+    .start-button:hover {
+      border-color: rgba(97, 191, 209, 0.82);
+      transform: translateY(-1px);
+    }
+
+    .icon-button:active,
+    .answer-button:active,
+    .start-button:active {
+      transform: translateY(1px);
+    }
+
+    .icon-button:disabled,
+    .answer-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.46;
+      transform: none;
+    }
+
+    .main {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(250px, 320px);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .game-shell {
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      position: relative;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+        #12191b;
+      box-shadow: 0 18px 58px var(--shadow);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border-radius: 6px;
+      background: #0b0e10;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.055);
+    }
+
+    .answers {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .lane-panel {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      padding: 8px;
+      border: 1px solid rgba(59, 75, 77, 0.88);
+      border-radius: var(--radius);
+      background: #151d20;
+    }
+
+    .lane-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .answer-button {
+      min-height: 50px;
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      background: linear-gradient(180deg, #253135, #1c2528);
+      text-align: left;
+    }
+
+    .answer-button .key {
+      width: 30px;
+      height: 30px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 6px;
+      background: rgba(97, 191, 209, 0.16);
+      color: #b8edf4;
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .answer-button .word {
+      min-width: 0;
+      color: var(--text);
+      font-size: clamp(1.02rem, 1.85vw, 1.22rem);
+      font-weight: 900;
+      line-height: 1.18;
+      overflow-wrap: anywhere;
+    }
+
+    .answer-button.correct {
+      border-color: rgba(143, 195, 93, 0.96);
+      background: linear-gradient(180deg, rgba(143, 195, 93, 0.34), rgba(31, 76, 42, 0.86));
+    }
+
+    .answer-button.wrong {
+      border-color: rgba(223, 101, 87, 0.98);
+      background: linear-gradient(180deg, rgba(223, 101, 87, 0.32), rgba(82, 30, 28, 0.84));
+    }
+
+    .hud {
+      min-height: 0;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.036), transparent),
+        var(--panel);
+      box-shadow: 0 18px 58px var(--shadow);
+    }
+
+    .timer-value {
+      font-size: clamp(3rem, 8vw, 5.4rem);
+      line-height: 0.9;
+      font-weight: 950;
+      color: #f0ce6c;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .label-row,
+    .stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .stat-row strong {
+      color: var(--text);
+      font-size: 1rem;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
+    .meter {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #0d1113;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+
+    .meter-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--red), var(--gold), var(--lime));
+      transition: width 120ms linear;
+    }
+
+    .stats {
+      display: grid;
+      gap: 9px;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(97, 191, 209, 0.44), transparent);
+    }
+
+    .feed {
+      min-height: 0;
+      flex: 1;
+      overflow: auto;
+      padding: 9px;
+      border: 1px solid rgba(59, 75, 77, 0.82);
+      border-radius: var(--radius);
+      background: #111719;
+    }
+
+    .feed p {
+      margin: 0;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+      color: #d9e6df;
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .feed p:last-child {
+      border-bottom: 0;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 10px;
+      display: none;
+      place-items: center;
+      padding: 22px;
+      border-radius: 6px;
+      background: rgba(10, 13, 14, 0.84);
+      text-align: center;
+      backdrop-filter: blur(2px);
+      z-index: 3;
+    }
+
+    .overlay.show {
+      display: grid;
+    }
+
+    .overlay-panel {
+      width: min(440px, 100%);
+    }
+
+    .overlay h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.8rem, 5vw, 3.7rem);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .overlay p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .review-list {
+      max-height: min(34vh, 260px);
+      margin: 0 0 16px;
+      overflow: auto;
+      display: grid;
+      gap: 7px;
+      text-align: left;
+    }
+
+    .review-list:empty {
+      display: none;
+    }
+
+    .review-title {
+      margin: 0 0 8px;
+      color: #b8edf4;
+      font-size: 0.86rem;
+      font-weight: 950;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .review-item {
+      display: grid;
+      grid-template-columns: minmax(84px, 0.9fr) minmax(110px, 1fr);
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid rgba(97, 191, 209, 0.22);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--text);
+      font-size: clamp(0.92rem, 2.2vw, 1.04rem);
+      font-weight: 900;
+    }
+
+    .review-item span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .start-button {
+      min-width: 150px;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-color: rgba(143, 195, 93, 0.82);
+      background: linear-gradient(180deg, #a9d36c, #668f39);
+      color: #0d1113;
+      font-weight: 950;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .topbar,
+      .main {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+
+      .hud {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        max-height: 178px;
+        overflow: hidden;
+      }
+
+      .timer-block,
+      .feed {
+        grid-column: 1 / -1;
+      }
+
+      .feed {
+        max-height: 62px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        padding: 8px;
+      }
+
+      .brand {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      h1 {
+        white-space: normal;
+      }
+
+      .toolbar {
+        flex-wrap: wrap;
+      }
+
+      select {
+        max-width: none;
+        flex: 1 1 180px;
+      }
+
+      .game-shell {
+        height: auto;
+        grid-template-rows: minmax(240px, 42vh) auto;
+      }
+
+      canvas {
+        min-height: 0;
+      }
+
+      .answers {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+      }
+
+      .lane-panel {
+        padding: 5px;
+        gap: 5px;
+      }
+
+      .lane-title {
+        font-size: 0.66rem;
+      }
+
+      .answer-button {
+        min-height: 42px;
+        grid-template-columns: 25px minmax(0, 1fr);
+        gap: 5px;
+        padding: 6px;
+      }
+
+      .answer-button .key {
+        width: 24px;
+        height: 24px;
+        font-size: 0.84rem;
+      }
+
+      .answer-button .word {
+        font-size: clamp(0.82rem, 3vw, 1rem);
+      }
+
+      .hud {
+        grid-template-columns: 1fr;
+        max-height: 148px;
+        gap: 7px;
+        padding: 9px;
+      }
+
+      .timer-value {
+        font-size: 2.7rem;
+      }
+
+      .feed,
+      .divider {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Word Fall 3 Lanes</h1>
+        <div class="phase" id="phaseLabel">Ready</div>
+      </div>
+      <div class="toolbar">
+        <select id="difficultySelect" aria-label="難易度">
+          <option value="junior1">中学1年</option>
+          <option value="junior2">中学2年</option>
+          <option value="junior3">中学3年</option>
+          <option value="high1">高校1年</option>
+          <option value="high2">高校2年</option>
+          <option value="high3">高校3年</option>
+          <option value="college">大学レベル</option>
+          <option value="business">ビジネス英語</option>
+        </select>
+        <button class="icon-button" id="pauseButton" type="button" title="一時停止" aria-label="一時停止" disabled>
+          <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14"></path>
+            <path d="M16 5v14"></path>
+          </svg>
+          <svg class="play-icon hidden" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5l11 7-11 7z"></path>
+          </svg>
+        </button>
+        <button class="icon-button" id="restartButton" type="button" title="リセット" aria-label="リセット">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66"></path>
+            <path d="M20 4v6h-6"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="main">
+      <div class="game-shell">
+        <canvas id="gameCanvas" width="900" height="620"></canvas>
+        <div class="answers" id="answers"></div>
+        <div class="overlay show" id="overlay">
+          <div class="overlay-panel">
+            <h2 id="overlayTitle">Word Fall</h2>
+            <p id="overlayCopy">3つのレーンを同時に見切る1分勝負。</p>
+            <div class="review-list" id="reviewList"></div>
+            <button class="start-button" id="startButton" type="button">Start</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hud">
+        <section class="timer-block">
+          <div class="label-row">
+            <span>Time</span>
+            <span id="difficultyLabel">中学1年</span>
+          </div>
+          <div class="timer-value" id="timeValue">60</div>
+          <div class="meter" aria-hidden="true">
+            <div class="meter-fill" id="timeBar"></div>
+          </div>
+        </section>
+
+        <section class="stats">
+          <div class="stat-row"><span>Score</span><strong id="scoreValue">0</strong></div>
+          <div class="stat-row"><span>Best</span><strong id="bestValue">0</strong></div>
+          <div class="stat-row"><span>Streak</span><strong id="streakValue">0</strong></div>
+        </section>
+
+        <div class="divider" aria-hidden="true"></div>
+
+        <section class="stats">
+          <div class="stat-row"><span>Correct</span><strong id="correctValue">0</strong></div>
+          <div class="stat-row"><span>Wrong</span><strong id="wrongValue">0</strong></div>
+          <div class="stat-row"><span>Miss</span><strong id="missValue">0</strong></div>
+          <div class="stat-row"><span>Accuracy</span><strong id="accuracyValue">0%</strong></div>
+        </section>
+
+        <section class="feed" id="feed" aria-label="ログ"></section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const RUN_TIME = 60;
+      const LANES = 3;
+      const STORAGE_PREFIX = "myshortcuts-word-fall-best-";
+      const MISS_LINE_OFFSET = 98;
+      const FALL_REFERENCE_DISTANCE = 394;
+      const FALL_SPEED_MULTIPLIER = 0.5;
+      const laneKeys = [
+        ["1", "2", "3"],
+        ["4", "5", "6"],
+        ["7", "8", "9"]
+      ];
+
+      const levels = {
+        junior1: {
+          label: "中学1年",
+          baseSpeed: 44,
+          accel: 0.75,
+          bonus: 0,
+          words: [
+            ["apple", "りんご"], ["book", "本"], ["cat", "猫"], ["dog", "犬"],
+            ["eat", "食べる"], ["go", "行く"], ["have", "持っている"], ["like", "好き"],
+            ["make", "作る"], ["morning", "朝"], ["music", "音楽"], ["school", "学校"],
+            ["study", "勉強する"], ["teacher", "先生"], ["water", "水"], ["write", "書く"],
+            ["family", "家族"], ["friend", "友達"], ["happy", "うれしい"], ["small", "小さい"],
+            ["big", "大きい"], ["city", "市"], ["class", "授業"], ["come", "来る"],
+            ["day", "日"], ["door", "ドア"], ["drink", "飲む"], ["easy", "簡単な"],
+            ["father", "父"], ["girl", "女の子"], ["good", "よい"], ["home", "家"],
+            ["house", "家屋"], ["look", "見る"], ["mother", "母"], ["name", "名前"],
+            ["new", "新しい"], ["old", "古い"], ["open", "開ける"], ["play", "遊ぶ"],
+            ["read", "読む"], ["run", "走る"], ["see", "見える"], ["sister", "姉妹"],
+            ["speak", "話す"], ["sport", "スポーツ"], ["student", "生徒"], ["today", "今日"]
+          ]
+        },
+        junior2: {
+          label: "中学2年",
+          baseSpeed: 49,
+          accel: 0.86,
+          bonus: 8,
+          words: [
+            ["arrive", "到着する"], ["become", "になる"], ["believe", "信じる"], ["borrow", "借りる"],
+            ["careful", "注意深い"], ["choose", "選ぶ"], ["cloud", "雲"], ["during", "の間に"],
+            ["enjoy", "楽しむ"], ["foreign", "外国の"], ["important", "重要な"], ["invite", "招待する"],
+            ["language", "言語"], ["letter", "手紙"], ["popular", "人気のある"], ["practice", "練習する"],
+            ["question", "質問"], ["remember", "覚えている"], ["special", "特別な"], ["without", "なしで"],
+            ["answer", "答え"], ["around", "周りに"], ["beautiful", "美しい"], ["between", "の間に"],
+            ["build", "建てる"], ["carry", "運ぶ"], ["change", "変える"], ["country", "国"],
+            ["different", "異なる"], ["early", "早い"], ["enough", "十分な"], ["famous", "有名な"],
+            ["finish", "終える"], ["healthy", "健康な"], ["history", "歴史"], ["holiday", "休日"],
+            ["learn", "学ぶ"], ["listen", "聞く"], ["minute", "分"], ["mountain", "山"],
+            ["plan", "計画"], ["river", "川"], ["science", "科学"], ["season", "季節"],
+            ["travel", "旅行する"], ["usually", "ふつう"], ["visit", "訪れる"], ["weather", "天気"]
+          ]
+        },
+        junior3: {
+          label: "中学3年",
+          baseSpeed: 55,
+          accel: 0.98,
+          bonus: 16,
+          words: [
+            ["although", "だけれども"], ["culture", "文化"], ["decide", "決める"], ["discover", "発見する"],
+            ["environment", "環境"], ["experience", "経験"], ["future", "未来"], ["graduate", "卒業する"],
+            ["imagine", "想像する"], ["interest", "興味"], ["knowledge", "知識"], ["natural", "自然の"],
+            ["necessary", "必要な"], ["opinion", "意見"], ["protect", "守る"], ["receive", "受け取る"],
+            ["relationship", "関係"], ["succeed", "成功する"], ["technology", "技術"], ["volunteer", "ボランティア"],
+            ["advise", "助言する"], ["allow", "許す"], ["appear", "現れる"], ["communicate", "意思を伝える"],
+            ["condition", "状態"], ["continue", "続ける"], ["create", "創造する"], ["develop", "発展する"],
+            ["education", "教育"], ["especially", "特に"], ["explain", "説明する"], ["global", "世界的な"],
+            ["human", "人間の"], ["increase", "増える"], ["meaning", "意味"], ["purpose", "目的"],
+            ["reduce", "減らす"], ["respect", "尊敬する"], ["result", "結果"], ["share", "共有する"],
+            ["society", "社会"], ["suggest", "提案する"], ["support", "支える"], ["tradition", "伝統"],
+            ["understand", "理解する"], ["useful", "役に立つ"], ["wonder", "不思議に思う"], ["youth", "若者"]
+          ]
+        },
+        high1: {
+          label: "高校1年",
+          baseSpeed: 60,
+          accel: 1.08,
+          bonus: 26,
+          words: [
+            ["achieve", "達成する"], ["analyze", "分析する"], ["ancient", "古代の"], ["attitude", "態度"],
+            ["benefit", "利益"], ["challenge", "挑戦"], ["compare", "比較する"], ["conclude", "結論づける"],
+            ["creative", "創造的な"], ["detail", "詳細"], ["effective", "効果的な"], ["factor", "要因"],
+            ["individual", "個人"], ["influence", "影響"], ["method", "方法"], ["opportunity", "機会"],
+            ["process", "過程"], ["require", "必要とする"], ["solution", "解決策"], ["various", "さまざまな"],
+            ["access", "利用する権利"], ["accurate", "正確な"], ["advantage", "利点"], ["behavior", "行動"],
+            ["community", "地域社会"], ["concern", "懸念"], ["connect", "つなぐ"], ["contain", "含む"],
+            ["current", "現在の"], ["debate", "討論"], ["define", "定義する"], ["demand", "需要"],
+            ["design", "設計する"], ["establish", "設立する"], ["focus", "焦点"], ["improve", "改善する"],
+            ["include", "含める"], ["issue", "問題"], ["local", "地元の"], ["major", "主要な"],
+            ["provide", "提供する"], ["resource", "資源"], ["similar", "似ている"], ["structure", "構造"],
+            ["therefore", "したがって"], ["value", "価値"], ["view", "見方"], ["whole", "全体の"]
+          ]
+        },
+        high2: {
+          label: "高校2年",
+          baseSpeed: 65,
+          accel: 1.18,
+          bonus: 38,
+          words: [
+            ["adapt", "適応する"], ["assume", "仮定する"], ["attribute", "属性"], ["bias", "偏見"],
+            ["complex", "複雑な"], ["consequence", "結果"], ["constant", "絶え間ない"], ["consume", "消費する"],
+            ["contrast", "対比する"], ["demonstrate", "実証する"], ["economy", "経済"], ["evidence", "証拠"],
+            ["function", "機能"], ["identity", "正体"], ["interpret", "解釈する"], ["maintain", "維持する"],
+            ["perspective", "視点"], ["previous", "以前の"], ["significant", "重要な"], ["specific", "具体的な"],
+            ["abstract", "抽象的な"], ["acquire", "習得する"], ["alternative", "代替の"], ["approach", "取り組み方"],
+            ["capacity", "能力"], ["circumstance", "状況"], ["concept", "概念"], ["consistent", "一貫した"],
+            ["construct", "組み立てる"], ["context", "文脈"], ["distribution", "分配"], ["diverse", "多様な"],
+            ["emerge", "現れる"], ["emphasize", "強調する"], ["estimate", "見積もる"], ["exclude", "除外する"],
+            ["framework", "枠組み"], ["impact", "影響力"], ["indicate", "示す"], ["instance", "例"],
+            ["involve", "伴う"], ["labor", "労働"], ["objective", "客観的な"], ["obvious", "明らかな"],
+            ["potential", "潜在的な"], ["principle", "原則"], ["region", "地域"], ["transfer", "移す"]
+          ]
+        },
+        high3: {
+          label: "高校3年",
+          baseSpeed: 70,
+          accel: 1.28,
+          bonus: 52,
+          words: [
+            ["abundant", "豊富な"], ["advocate", "主張する"], ["ambiguous", "曖昧な"], ["anticipate", "予期する"],
+            ["comprehensive", "包括的な"], ["contradict", "矛盾する"], ["derive", "由来する"], ["enhance", "高める"],
+            ["evaluate", "評価する"], ["inevitable", "避けられない"], ["integrate", "統合する"], ["justify", "正当化する"],
+            ["modify", "修正する"], ["notion", "概念"], ["obtain", "得る"], ["phenomenon", "現象"],
+            ["priority", "優先事項"], ["profound", "深い"], ["restrict", "制限する"], ["subtle", "微妙な"],
+            ["allocate", "割り当てる"], ["assert", "断言する"], ["compatible", "両立できる"], ["conventional", "従来の"],
+            ["decline", "減少する"], ["dimension", "側面"], ["domestic", "国内の"], ["eliminate", "取り除く"],
+            ["equivalent", "同等の"], ["exceed", "超える"], ["fundamental", "根本的な"], ["generate", "生み出す"],
+            ["immense", "非常に大きい"], ["implement", "実行する"], ["initial", "最初の"], ["innovation", "革新"],
+            ["logical", "論理的な"], ["minimum", "最小限"], ["mutual", "相互の"], ["preserve", "保存する"],
+            ["rational", "合理的な"], ["release", "解放する"], ["shift", "変化"], ["sufficient", "十分な"],
+            ["sustain", "維持する"], ["temporary", "一時的な"], ["ultimate", "究極の"], ["widespread", "広範囲の"]
+          ]
+        },
+        college: {
+          label: "大学レベル",
+          baseSpeed: 76,
+          accel: 1.4,
+          bonus: 70,
+          words: [
+            ["coherent", "一貫した"], ["empirical", "経験的な"], ["hypothesis", "仮説"], ["implicit", "暗黙の"],
+            ["inference", "推論"], ["intrinsic", "本質的な"], ["paradigm", "枠組み"], ["plausible", "もっともらしい"],
+            ["preliminary", "予備的な"], ["qualitative", "質的な"], ["quantitative", "量的な"], ["scrutinize", "精査する"],
+            ["synthesize", "統合する"], ["theoretical", "理論的な"], ["validity", "妥当性"], ["variable", "変数"],
+            ["deduction", "演繹"], ["criterion", "基準"], ["correlation", "相関"], ["substantiate", "立証する"],
+            ["autonomy", "自律性"], ["causality", "因果関係"], ["connotation", "含意"], ["contingent", "偶発的な"],
+            ["discourse", "言説"], ["epistemology", "認識論"], ["extrapolate", "推定する"], ["heterogeneous", "異質な"],
+            ["hierarchy", "階層"], ["ideology", "イデオロギー"], ["methodology", "方法論"], ["normative", "規範的な"],
+            ["ontology", "存在論"], ["perception", "知覚"], ["phenomenology", "現象学"], ["pragmatic", "実用的な"],
+            ["proposition", "命題"], ["refute", "反論する"], ["rhetoric", "修辞"], ["salient", "顕著な"],
+            ["skeptical", "懐疑的な"], ["taxonomy", "分類法"], ["transient", "一時的な"], ["unify", "統一する"],
+            ["utility", "有用性"], ["verify", "検証する"], ["viable", "実行可能な"], ["volatile", "不安定な"]
+          ]
+        },
+        business: {
+          label: "ビジネス英語",
+          baseSpeed: 72,
+          accel: 1.32,
+          bonus: 62,
+          words: [
+            ["agenda", "議題"], ["asset", "資産"], ["budget", "予算"], ["client", "顧客"],
+            ["deadline", "締め切り"], ["delegate", "委任する"], ["estimate", "見積もる"], ["invoice", "請求書"],
+            ["margin", "利益率"], ["milestone", "節目"], ["negotiate", "交渉する"], ["objective", "目的"],
+            ["proposal", "提案書"], ["revenue", "収益"], ["stakeholder", "利害関係者"], ["strategy", "戦略"],
+            ["supplier", "供給業者"], ["workflow", "作業手順"], ["compliance", "法令遵守"], ["forecast", "予測"],
+            ["acquisition", "買収"], ["benchmark", "基準値"], ["cashflow", "資金繰り"], ["contract", "契約"],
+            ["deliverable", "成果物"], ["department", "部署"], ["equity", "自己資本"], ["feasibility", "実現可能性"],
+            ["headcount", "人員数"], ["inventory", "在庫"], ["launch", "発売する"], ["liability", "負債"],
+            ["logistics", "物流"], ["onboarding", "導入研修"], ["overhead", "間接費"], ["pipeline", "案件経路"],
+            ["procurement", "調達"], ["quota", "割当目標"], ["retention", "維持率"], ["roadmap", "計画表"],
+            ["scalability", "拡張性"], ["turnover", "離職率"], ["valuation", "企業価値評価"], ["vendor", "販売業者"],
+            ["wholesale", "卸売"], ["yield", "利回り"], ["alignment", "方針一致"], ["breakdown", "内訳"]
+          ]
+        }
+      };
+
+      const TARGET_WORDS_PER_LEVEL = 150;
+      const supplementalWordText = {
+        junior1: `
+air|空気
+animal|動物
+aunt|おば
+baby|赤ちゃん
+ball|ボール
+beach|浜辺
+bed|ベッド
+bike|自転車
+bird|鳥
+black|黒い
+blue|青い
+boat|ボート
+boy|男の子
+bread|パン
+brother|兄弟
+bus|バス
+cake|ケーキ
+car|車
+chair|いす
+clean|きれいな
+close|閉じる
+cold|寒い
+color|色
+cook|料理する
+cup|カップ
+desk|机
+dinner|夕食
+doctor|医者
+ear|耳
+egg|卵
+eight|8
+eleven|11
+English|英語
+eye|目
+face|顔
+fast|速い
+fish|魚
+flower|花
+food|食べ物
+foot|足
+four|4
+game|ゲーム
+garden|庭
+hand|手
+head|頭
+hello|こんにちは
+hot|暑い
+hotel|ホテル
+hour|時間
+Japan|日本
+juice|ジュース
+kitchen|台所
+late|遅い
+left|左
+lemon|レモン
+library|図書館
+light|光
+lunch|昼食
+man|男性
+milk|牛乳
+moon|月
+movie|映画
+night|夜
+nine|9
+notebook|ノート
+park|公園
+pen|ペン
+pencil|鉛筆
+picture|絵
+plane|飛行機
+rain|雨
+red|赤い
+rice|米
+right|右
+room|部屋
+sad|悲しい
+sea|海
+seven|7
+shop|店
+six|6
+sleep|眠る
+slow|遅い
+soccer|サッカー
+song|歌
+spring|春
+star|星
+store|店
+strong|強い
+summer|夏
+table|テーブル
+tall|背が高い
+ten|10
+three|3
+ticket|切符
+town|町
+train|電車
+tree|木
+two|2
+uncle|おじ
+walk|歩く
+warm|暖かい
+week|週
+white|白い
+window|窓
+winter|冬
+woman|女性
+yellow|黄色い
+young|若い
+zoo|動物園
+bag|かばん
+cap|帽子
+clock|時計
+green|緑の
+`,
+        junior2: `
+abroad|海外へ
+afraid|恐れて
+age|年齢
+agree|同意する
+airport|空港
+alone|一人で
+already|すでに
+bridge|橋
+bright|明るい
+calendar|カレンダー
+camera|カメラ
+chance|機会
+cheap|安い
+church|教会
+clothes|衣服
+collect|集める
+concert|演奏会
+dangerous|危険な
+dark|暗い
+deep|深い
+delicious|おいしい
+dictionary|辞書
+dream|夢
+drive|運転する
+each|それぞれ
+earth|地球
+east|東
+event|行事
+example|例
+expensive|高価な
+fact|事実
+few|少数の
+field|野原
+forest|森
+free|自由な
+gift|贈り物
+glass|ガラス
+group|集団
+guide|案内する
+half|半分
+hospital|病院
+idea|考え
+island|島
+join|参加する
+key|鍵
+kind|親切な
+lake|湖
+last|最後の
+later|あとで
+leave|去る
+lesson|授業
+lose|失う
+mail|郵便
+maybe|たぶん
+middle|中央
+mistake|間違い
+north|北
+office|事務所
+once|一度
+own|自分自身の
+pair|一組
+parent|親
+party|パーティー
+phone|電話
+place|場所
+poor|貧しい
+post|投函する
+present|贈り物
+quiet|静かな
+reach|到着する
+reason|理由
+reply|返事をする
+rest|休息
+road|道路
+safe|安全な
+save|救う
+sell|売る
+send|送る
+should|すべきである
+side|側
+simple|単純な
+since|以来
+sky|空
+sound|音
+south|南
+spend|費やす
+story|物語
+subject|科目
+taste|味がする
+than|よりも
+thing|物
+together|一緒に
+try|試す
+turn|曲がる
+village|村
+wait|待つ
+west|西
+word|単語
+world|世界
+worry|心配する
+yesterday|昨日
+area|地域
+bottle|びん
+circle|円
+college|大学
+corner|角
+`,
+        junior3: `
+ability|能力
+accept|受け入れる
+action|行動
+actually|実際に
+add|加える
+adult|大人
+affect|影響する
+almost|ほとんど
+anybody|だれか
+anything|何でも
+article|記事
+attend|出席する
+basic|基本的な
+cause|原因
+certain|確かな
+choice|選択
+citizen|市民
+complete|完成した
+consider|よく考える
+control|支配する
+conversation|会話
+difference|違い
+difficult|難しい
+direct|直接の
+discuss|議論する
+effect|効果
+either|どちらか
+encourage|励ます
+energy|エネルギー
+even|さえ
+everyone|みんな
+familiar|よく知られた
+final|最後の
+follow|従う
+force|力
+general|一般的な
+however|しかしながら
+information|情報
+instead|代わりに
+introduce|紹介する
+level|水準
+matter|問題
+mind|心
+modern|現代の
+national|国の
+offer|申し出る
+order|注文
+perhaps|おそらく
+personal|個人の
+possible|可能な
+power|力
+prepare|準備する
+problem|問題
+produce|生産する
+program|番組
+public|公共の
+record|記録
+remain|残る
+report|報告する
+return|戻る
+role|役割
+rule|規則
+search|探す
+serious|深刻な
+several|いくつかの
+skill|技能
+solve|解決する
+sometimes|時々
+standard|標準
+state|状態
+step|一歩
+system|制度
+task|課題
+term|用語
+though|だけれども
+toward|の方へ
+train|訓練する
+voice|声
+waste|無駄にする
+whether|かどうか
+while|間
+willing|喜んでする
+within|以内に
+actual|実際の
+approach|近づく
+avoid|避ける
+balance|均衡
+beneficial|有益な
+common|共通の
+decision|決定
+distance|距離
+express|表現する
+freedom|自由
+growth|成長
+impossible|不可能な
+international|国際的な
+knowledgeable|知識のある
+naturalize|帰化する
+population|人口
+recognize|認識する
+solution|解決策
+valuable|価値のある
+`,
+        high1: `
+abroad|海外で
+academic|学問の
+account|説明
+active|積極的な
+actual|実際の
+address|対処する
+advance|前進する
+advise|助言する
+aim|目的
+anxiety|不安
+appeal|訴える
+apply|応用する
+argument|議論
+arrange|手配する
+aspect|側面
+attempt|試み
+average|平均
+avoid|避ける
+background|背景
+balance|均衡
+basic|基本的な
+belief|信念
+beyond|を越えて
+brief|短い
+campaign|運動
+career|職業
+case|場合
+central|中心的な
+character|特徴
+claim|主張する
+classify|分類する
+common|共通の
+communication|意思疎通
+competition|競争
+condition|条件
+conduct|行う
+confidence|自信
+conflict|対立
+consider|考慮する
+contact|接触
+contribute|貢献する
+cooperate|協力する
+data|データ
+decision|決定
+degree|程度
+describe|描写する
+desire|願望
+determine|決定する
+direction|方向
+disaster|災害
+display|表示する
+due|当然の
+economic|経済の
+element|要素
+emotion|感情
+enable|可能にする
+entire|全体の
+environmental|環境の
+essential|不可欠な
+exist|存在する
+expect|予期する
+expert|専門家
+express|表現する
+extent|程度
+feature|特徴
+financial|金融の
+frequent|頻繁な
+function|機能する
+gain|得る
+goal|目標
+government|政府
+growth|成長
+handle|扱う
+identify|特定する
+immediate|即時の
+increase|増加
+industry|産業
+inform|知らせる
+intend|意図する
+lead|導く
+likely|ありそうな
+limit|制限
+material|材料
+measure|測定する
+media|メディア
+mental|精神の
+network|ネットワーク
+notice|気づく
+observe|観察する
+participate|参加する
+pattern|型
+performance|成績
+physical|身体の
+policy|政策
+positive|前向きな
+prevent|防ぐ
+private|私的な
+project|計画
+quality|質
+range|範囲
+recent|最近の
+recommend|推薦する
+`,
+        high2: `
+abandon|捨てる
+absolute|絶対的な
+absorb|吸収する
+accompany|同行する
+accumulate|蓄積する
+acknowledge|認める
+adequate|十分な
+adjust|調整する
+administration|管理
+adopt|採用する
+afford|余裕がある
+agency|機関
+agriculture|農業
+analysis|分析
+annual|年一回の
+apparent|明白な
+approximately|およそ
+arise|生じる
+assessment|評価
+assign|割り当てる
+association|関連
+authority|権威
+awareness|認識
+barrier|障壁
+capable|能力がある
+category|分類
+challenge|課題
+chemical|化学の
+civil|市民の
+commit|委ねる
+compensate|補償する
+component|構成要素
+compound|化合物
+comprise|構成する
+concentrate|集中する
+confine|制限する
+consent|同意
+considerable|かなりの
+constitute|構成する
+consumer|消費者
+contemporary|現代の
+corporation|企業
+correspond|一致する
+crucial|極めて重要な
+cultural|文化的な
+cycle|循環
+debate|討論
+dedicate|ささげる
+deficit|不足
+deliberate|意図的な
+democracy|民主主義
+dense|密集した
+deny|否定する
+despite|にもかかわらず
+detect|検出する
+device|装置
+discipline|学問分野
+distinct|明確に異なる
+dominate|支配する
+draft|下書き
+efficient|効率的な
+elementary|初歩の
+emission|排出
+enterprise|企業
+equation|方程式
+erosion|浸食
+ethical|倫理的な
+expand|拡大する
+exposure|さらされること
+external|外部の
+facilitate|促進する
+federal|連邦の
+flexible|柔軟な
+foundation|基盤
+frequency|頻度
+gender|性別
+genetic|遺伝の
+guarantee|保証する
+immigration|移民
+incentive|動機づけ
+incorporate|取り入れる
+index|指標
+infrastructure|基盤設備
+innovation|革新
+insight|洞察
+institution|制度
+internal|内部の
+investigate|調査する
+isolate|孤立させる
+justify|正当化する
+lecture|講義
+legal|法律の
+mechanism|仕組み
+medium|媒体
+obligation|義務
+orientation|方向づけ
+outcome|結果
+panel|委員会
+phase|段階
+practitioner|実務家
+prevalence|普及
+ratio|比率
+restore|回復する
+segment|区分
+trigger|引き起こす
+`,
+        high3: `
+abolish|廃止する
+accelerate|加速する
+accurately|正確に
+adjacent|隣接した
+aggregate|集める
+analogy|類推
+arbitrary|任意の
+artificial|人工の
+autonomous|自律的な
+beneficiary|受益者
+clarify|明確にする
+coincide|一致する
+commence|始まる
+commodity|商品
+compel|強いる
+compile|編集する
+complement|補完する
+compromise|妥協
+conceive|思いつく
+condense|凝縮する
+conform|従う
+constrain|制約する
+controversy|論争
+converse|逆の
+convince|納得させる
+coordinate|調整する
+core|核心
+criteria|基準
+deduce|推論する
+definite|明確な
+degrade|低下させる
+deviation|逸脱
+diminish|減少する
+displace|移動させる
+dispose|処分する
+distort|ゆがめる
+diversity|多様性
+duration|持続期間
+dynamic|動的な
+eligible|資格のある
+empower|権限を与える
+enforce|施行する
+enormous|巨大な
+entity|実体
+equilibrium|均衡
+ethical|倫理的な
+exaggerate|誇張する
+exclusive|排他的な
+explicit|明白な
+extract|抽出する
+feasible|実行可能な
+fluctuate|変動する
+formulate|定式化する
+gradual|徐々の
+homogeneous|同質の
+hostile|敵意のある
+identical|同一の
+ideally|理想的には
+induce|引き起こす
+inequality|不平等
+inferior|劣った
+inhibit|抑制する
+inherent|固有の
+initiative|主導権
+inspection|検査
+intensity|強度
+interact|相互作用する
+intervene|介入する
+invoke|呼び起こす
+irregular|不規則な
+legitimate|正当な
+magnitude|大きさ
+manipulate|操作する
+marginal|周辺の
+mediate|仲介する
+migrate|移住する
+nevertheless|それにもかかわらず
+neutral|中立の
+obscure|曖昧な
+occupy|占める
+ongoing|進行中の
+orient|方向づける
+overlap|重なる
+parallel|平行の
+parameter|媒介変数
+persist|持続する
+precede|先行する
+predict|予測する
+preliminary|予備的な
+presume|推定する
+prohibit|禁止する
+quantify|数量化する
+refine|洗練する
+reinforce|強化する
+residual|残りの
+scenario|筋書き
+sequence|連続
+simulate|模擬する
+subordinate|従属する
+threshold|しきい値
+transform|変形する
+valid|妥当な
+verify|検証する
+`,
+        college: `
+abstraction|抽象化
+adversarial|敵対的な
+affinity|親和性
+amplify|増幅する
+annotation|注釈
+anomaly|異常
+archetype|原型
+articulate|明確に述べる
+asymmetry|非対称
+axiom|公理
+binary|二項の
+cartography|地図作成
+catalyst|触媒
+chronology|年代順
+classification|分類
+cognition|認知
+cohesion|結束
+computation|計算
+conceptual|概念的な
+conjecture|推測
+consensus|合意
+constraint|制約
+continuum|連続体
+contradiction|矛盾
+corpus|資料体
+derivative|派生物
+dialectic|弁証法
+diffusion|拡散
+dilemma|ジレンマ
+discrete|離散的な
+empiricism|経験主義
+encoding|符号化
+entropy|エントロピー
+equivocal|多義的な
+ethnography|民族誌
+evolutionary|進化の
+falsify|反証する
+heuristic|発見的手法
+holistic|全体的な
+invariant|不変量
+iterative|反復的な
+latent|潜在的な
+lexicon|語彙
+liminal|境界の
+linguistic|言語学の
+longitudinal|長期的な
+manifold|多様体
+meta-analysis|メタ分析
+metaphor|比喩
+modality|様相
+morphology|形態論
+multivariate|多変量の
+paradox|逆説
+pedagogy|教育学
+peripheral|周辺の
+pluralism|多元主義
+postulate|仮定する
+precedent|先例
+probabilistic|確率的な
+reciprocal|相互の
+recursive|再帰的な
+redundancy|冗長性
+relativism|相対主義
+replicate|複製する
+resilience|回復力
+schema|図式
+semantic|意味の
+simulation|模擬実験
+singularity|特異点
+spatial|空間の
+statistical|統計的な
+stratification|階層化
+subjective|主観的な
+symmetry|対称性
+syntax|統語論
+temporal|時間の
+topology|位相幾何学
+trajectory|軌跡
+transcend|超越する
+typology|類型論
+universal|普遍的な
+variance|分散
+vector|ベクトル
+vernacular|日常語
+algorithm|アルゴリズム
+anthropology|人類学
+archival|記録資料の
+Bayesian|ベイズの
+calibration|較正
+covariance|共分散
+cybernetics|サイバネティクス
+deconstruction|脱構築
+dimensionality|次元性
+eigenvalue|固有値
+ethnology|民族学
+falsifiability|反証可能性
+genealogy|系譜
+hermeneutics|解釈学
+isotropic|等方性の
+lattice|格子
+mediation|媒介
+neural|神経の
+operationalize|操作化する
+phonology|音韻論
+polynomial|多項式
+postmodern|ポストモダンの
+protocol|手順
+regression|回帰
+semiotics|記号論
+stochastic|確率的な
+`,
+        business: `
+accounts payable|買掛金
+accounts receivable|売掛金
+annual report|年次報告書
+approval|承認
+arbitration|仲裁
+backlog|未処理分
+balance sheet|貸借対照表
+billable|請求可能な
+brand awareness|ブランド認知
+business unit|事業部
+capital expenditure|設備投資
+case study|事例研究
+closing|成約
+collateral|担保
+commission|手数料
+competitive edge|競争優位
+confidentiality|機密保持
+contingency|不測事態
+conversion rate|成約率
+corporate governance|企業統治
+cost benefit|費用対効果
+creditor|債権者
+customer churn|顧客離れ
+dashboard|管理画面
+depreciation|減価償却
+discount rate|割引率
+distribution channel|流通経路
+dividend|配当
+due diligence|適正評価
+earnings|利益
+economies of scale|規模の経済
+employee engagement|従業員エンゲージメント
+enterprise value|企業価値
+escalation|上位報告
+executive summary|要旨
+expense report|経費精算書
+fiscal year|会計年度
+fixed cost|固定費
+follow-up|追跡対応
+gross profit|粗利益
+implementation|実装
+income statement|損益計算書
+key account|重要顧客
+knowledge transfer|知識移転
+lead generation|見込み客獲得
+market share|市場占有率
+merger|合併
+net income|純利益
+non-disclosure|秘密保持
+operating cost|運営費
+operating margin|営業利益率
+outsourcing|外部委託
+payroll|給与計算
+performance review|業績評価
+profitability|収益性
+purchase order|発注書
+quality assurance|品質保証
+quarterly|四半期の
+receivable|未収金
+reconciliation|照合
+recurring revenue|継続収益
+refund|返金
+regulation|規制
+reimbursement|払い戻し
+renewal|更新
+request for proposal|提案依頼書
+return on investment|投資利益率
+risk assessment|リスク評価
+sales funnel|販売導線
+service level|サービス水準
+shareholder|株主
+shortfall|不足
+sign-off|承認完了
+statement of work|作業範囲記述書
+subsidiary|子会社
+target market|対象市場
+terms and conditions|取引条件
+trade-off|兼ね合い
+variable cost|変動費
+working capital|運転資本
+write-off|償却
+actionable|実行可能な
+audit|監査
+burn rate|資金消費率
+capacity planning|人員計画
+cash reserve|現金準備
+clause|条項
+cost center|コスト部門
+debt service|債務返済
+decision maker|意思決定者
+enterprise resource planning|基幹業務計画
+exit strategy|出口戦略
+fiscal quarter|会計四半期
+go-to-market|市場投入
+gross margin|粗利益率
+liquidity|流動性
+market penetration|市場浸透
+net terms|支払条件
+operating income|営業利益
+procurement policy|調達方針
+product market fit|市場適合
+revenue stream|収益源
+run rate|年間換算売上
+sales enablement|営業支援
+scope creep|範囲拡大
+service agreement|サービス契約
+subscription|定期契約
+total addressable market|最大市場規模
+unit economics|単位経済性
+variance analysis|差異分析
+working session|作業会議
+`
+      };
+
+      function parseWordTable(table) {
+        return table.trim().split(/\n+/).map((line) => {
+          const parts = line.trim().split("|");
+          return [parts[0], parts.slice(1).join("|")];
+        }).filter(([english, japanese]) => english && japanese);
+      }
+
+      function applySupplementalWords() {
+        for (const [levelKey, table] of Object.entries(supplementalWordText)) {
+          const level = levels[levelKey];
+          if (!level) {
+            continue;
+          }
+          const seen = new Set(level.words.map(([english]) => english.toLowerCase()));
+          for (const entry of parseWordTable(table)) {
+            const key = entry[0].toLowerCase();
+            if (level.words.length >= TARGET_WORDS_PER_LEVEL) {
+              break;
+            }
+            if (!seen.has(key)) {
+              level.words.push(entry);
+              seen.add(key);
+            }
+          }
+        }
+      }
+
+      applySupplementalWords();
+
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const ui = {
+        phase: document.getElementById("phaseLabel"),
+        difficulty: document.getElementById("difficultySelect"),
+        difficultyLabel: document.getElementById("difficultyLabel"),
+        pauseButton: document.getElementById("pauseButton"),
+        pauseIcon: document.querySelector(".pause-icon"),
+        playIcon: document.querySelector(".play-icon"),
+        restartButton: document.getElementById("restartButton"),
+        answers: document.getElementById("answers"),
+        overlay: document.getElementById("overlay"),
+        overlayTitle: document.getElementById("overlayTitle"),
+        overlayCopy: document.getElementById("overlayCopy"),
+        reviewList: document.getElementById("reviewList"),
+        startButton: document.getElementById("startButton"),
+        time: document.getElementById("timeValue"),
+        timeBar: document.getElementById("timeBar"),
+        score: document.getElementById("scoreValue"),
+        best: document.getElementById("bestValue"),
+        streak: document.getElementById("streakValue"),
+        correct: document.getElementById("correctValue"),
+        wrong: document.getElementById("wrongValue"),
+        miss: document.getElementById("missValue"),
+        accuracy: document.getElementById("accuracyValue"),
+        feed: document.getElementById("feed")
+      };
+
+      const state = {
+        phase: "ready",
+        difficulty: "junior1",
+        lanes: [],
+        score: 0,
+        best: 0,
+        streak: 0,
+        correct: 0,
+        wrong: 0,
+        miss: 0,
+        timeLeft: RUN_TIME,
+        elapsed: 0,
+        lastTime: 0,
+        feedback: [],
+        review: new Map(),
+        recent: [],
+        effects: [],
+        rngSeed: 1
+      };
+
+      function nextRandom() {
+        state.rngSeed = (Math.imul(state.rngSeed, 1664525) + 1013904223) >>> 0;
+        return state.rngSeed / 4294967296;
+      }
+
+      function randInt(min, max) {
+        return Math.floor(nextRandom() * (max - min + 1)) + min;
+      }
+
+      function shuffle(list) {
+        const copy = list.slice();
+        for (let i = copy.length - 1; i > 0; i -= 1) {
+          const j = randInt(0, i);
+          [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+      }
+
+      function bestKey() {
+        return STORAGE_PREFIX + state.difficulty;
+      }
+
+      function readBest() {
+        try {
+          return Number(localStorage.getItem(bestKey()) || "0");
+        } catch {
+          return 0;
+        }
+      }
+
+      function saveBest() {
+        state.best = Math.max(state.best, state.score);
+        try {
+          localStorage.setItem(bestKey(), String(state.best));
+        } catch {
+          // Local storage can be unavailable in strict private contexts.
+        }
+      }
+
+      function activeLevel() {
+        return levels[state.difficulty];
+      }
+
+      function resizeCanvas() {
+        const oldSize = canvas.width && canvas.height ? canvasSize() : null;
+        const box = canvas.getBoundingClientRect();
+        const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        canvas.width = Math.max(480, Math.floor(box.width * ratio));
+        canvas.height = Math.max(360, Math.floor(box.height * ratio));
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        const newSize = canvasSize();
+        if (oldSize && state.phase === "playing") {
+          preserveFallProgress(oldSize, newSize);
+        }
+      }
+
+      function canvasSize() {
+        const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        return {
+          width: canvas.width / ratio,
+          height: canvas.height / ratio
+        };
+      }
+
+      function missLineY(size = canvasSize()) {
+        return Math.max(180, size.height - MISS_LINE_OFFSET);
+      }
+
+      function fallDistance(size = canvasSize()) {
+        return Math.max(240, missLineY(size) + 96);
+      }
+
+      function fallHeightScale(size = canvasSize()) {
+        return Math.max(0.65, Math.min(2.25, fallDistance(size) / FALL_REFERENCE_DISTANCE));
+      }
+
+      function preserveFallProgress(oldSize, newSize) {
+        const oldMiss = missLineY(oldSize);
+        const newMiss = missLineY(newSize);
+        for (const lane of state.lanes) {
+          if (!lane || lane.locked) {
+            continue;
+          }
+          const startY = lane.startY ?? lane.y;
+          const oldRange = Math.max(1, oldMiss - startY);
+          const progress = Math.max(0, Math.min(1.25, (lane.y - startY) / oldRange));
+          lane.y = startY + (newMiss - startY) * progress;
+        }
+      }
+
+      function chooseWord() {
+        const words = activeLevel().words;
+        let candidate = words[randInt(0, words.length - 1)];
+        for (let i = 0; i < 24 && state.recent.includes(candidate[0]); i += 1) {
+          candidate = words[randInt(0, words.length - 1)];
+        }
+        state.recent.push(candidate[0]);
+        state.recent = state.recent.slice(-9);
+        return { english: candidate[0], japanese: candidate[1] };
+      }
+
+      function makeOptions(correct) {
+        const pool = activeLevel().words
+          .filter((entry) => entry[1] !== correct)
+          .map((entry) => entry[1]);
+        const choices = [correct];
+        while (choices.length < 3 && pool.length) {
+          const pick = pool.splice(randInt(0, pool.length - 1), 1)[0];
+          if (!choices.includes(pick)) {
+            choices.push(pick);
+          }
+        }
+        return shuffle(choices);
+      }
+
+      function spawnLane(index, startAbove) {
+        const word = chooseWord();
+        const options = makeOptions(word.japanese);
+        const startY = startAbove ? -56 - randInt(0, 76) : -34 - randInt(0, 44);
+        state.lanes[index] = {
+          index,
+          word,
+          options,
+          y: startY,
+          startY,
+          shake: 0,
+          flash: "",
+          flashTime: 0,
+          locked: false
+        };
+      }
+
+      function makeLanes() {
+        state.lanes = [];
+        for (let i = 0; i < LANES; i += 1) {
+          spawnLane(i, true);
+          state.lanes[i].y -= i * 58;
+        }
+      }
+
+      function addFeed(text) {
+        state.feedback.unshift(text);
+        state.feedback = state.feedback.slice(0, 8);
+        renderFeed();
+      }
+
+      function renderFeed() {
+        ui.feed.innerHTML = "";
+        const lines = state.feedback.length ? state.feedback : ["Ready"];
+        for (const text of lines) {
+          const p = document.createElement("p");
+          p.textContent = text;
+          ui.feed.appendChild(p);
+        }
+      }
+
+      function addReview(word, picked, reason) {
+        const existing = state.review.get(word.english);
+        if (existing) {
+          existing.count += 1;
+          existing.reason = reason;
+          existing.lastPicked = picked;
+          return;
+        }
+        state.review.set(word.english, {
+          english: word.english,
+          japanese: word.japanese,
+          lastPicked: picked,
+          reason,
+          count: 1
+        });
+      }
+
+      function showAnswerReveal(laneIndex, lane) {
+        const size = canvasSize();
+        state.effects.push({
+          type: "reveal",
+          lane: laneIndex,
+          japanese: lane.word.japanese,
+          text: lane.word.japanese,
+          y: Math.max(92, Math.min(size.height - 124, lane.y + 32)),
+          life: 1.12,
+          maxLife: 1.12,
+          color: "#f0ce6c"
+        });
+      }
+
+      function renderReviewList() {
+        ui.reviewList.innerHTML = "";
+        if (!state.review.size) {
+          const empty = document.createElement("div");
+          empty.className = "review-title";
+          empty.textContent = "復習なし";
+          ui.reviewList.appendChild(empty);
+          return;
+        }
+
+        const title = document.createElement("div");
+        title.className = "review-title";
+        title.textContent = "復習リスト";
+        ui.reviewList.appendChild(title);
+
+        for (const item of state.review.values()) {
+          const row = document.createElement("div");
+          row.className = "review-item";
+          const english = document.createElement("span");
+          english.textContent = item.count > 1 ? `${item.english} x${item.count}` : item.english;
+          const japanese = document.createElement("span");
+          japanese.textContent = item.japanese;
+          row.append(english, japanese);
+          ui.reviewList.appendChild(row);
+        }
+      }
+
+      function renderAnswerButtons() {
+        ui.answers.innerHTML = "";
+        for (let laneIndex = 0; laneIndex < LANES; laneIndex += 1) {
+          const lane = state.lanes[laneIndex];
+          const panel = document.createElement("section");
+          panel.className = "lane-panel";
+          panel.setAttribute("aria-label", `Lane ${laneIndex + 1}`);
+
+          const title = document.createElement("div");
+          title.className = "lane-title";
+          const left = document.createElement("span");
+          left.textContent = `Lane ${laneIndex + 1}`;
+          const right = document.createElement("span");
+          right.textContent = laneKeys[laneIndex].join(" ");
+          title.append(left, right);
+          panel.appendChild(title);
+
+          for (let optionIndex = 0; optionIndex < 3; optionIndex += 1) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "answer-button";
+            button.dataset.lane = String(laneIndex);
+            button.dataset.option = String(optionIndex);
+            button.disabled = state.phase !== "playing";
+            if (lane && lane.flashTime > 0) {
+              const isCorrect = lane.options[optionIndex] === lane.word.japanese;
+              if (lane.flash === "correct" && isCorrect) {
+                button.classList.add("correct");
+              } else if (lane.flash === "wrong" && isCorrect) {
+                button.classList.add("correct");
+              } else if (lane.flash === "wrong" && !isCorrect) {
+                button.classList.add("wrong");
+              }
+            }
+
+            const key = document.createElement("span");
+            key.className = "key";
+            key.textContent = laneKeys[laneIndex][optionIndex];
+            const word = document.createElement("span");
+            word.className = "word";
+            word.textContent = lane ? lane.options[optionIndex] : "";
+            button.append(key, word);
+            button.addEventListener("click", () => answer(laneIndex, optionIndex));
+            panel.appendChild(button);
+          }
+          ui.answers.appendChild(panel);
+        }
+      }
+
+      function startGame() {
+        const seedBase = Date.now() ^ Math.floor(Math.random() * 0xffffffff);
+        state.rngSeed = seedBase >>> 0;
+        state.phase = "playing";
+        state.difficulty = ui.difficulty.value;
+        state.score = 0;
+        state.best = readBest();
+        state.streak = 0;
+        state.correct = 0;
+        state.wrong = 0;
+        state.miss = 0;
+        state.timeLeft = RUN_TIME;
+        state.elapsed = 0;
+        state.feedback = [];
+        state.review = new Map();
+        state.effects = [];
+        state.recent = [];
+        state.lastTime = performance.now();
+        makeLanes();
+        hideOverlay();
+        addFeed(`${activeLevel().label} / Start`);
+        updateUi();
+        renderAnswerButtons();
+      }
+
+      function finishGame() {
+        if (state.phase === "over") {
+          return;
+        }
+        state.phase = "over";
+        saveBest();
+        showOverlay("Time Up", `Score ${state.score} / Best ${state.best}`, "Again");
+        renderReviewList();
+        addFeed(`Finish: ${state.score}`);
+        updateUi();
+        renderAnswerButtons();
+      }
+
+      function resetGame() {
+        state.phase = "ready";
+        state.difficulty = ui.difficulty.value;
+        state.score = 0;
+        state.best = readBest();
+        state.streak = 0;
+        state.correct = 0;
+        state.wrong = 0;
+        state.miss = 0;
+        state.timeLeft = RUN_TIME;
+        state.elapsed = 0;
+        state.feedback = [];
+        state.review = new Map();
+        state.effects = [];
+        state.recent = [];
+        state.lastTime = performance.now();
+        makeLanes();
+        renderFeed();
+        showOverlay("Word Fall", `${activeLevel().label}`, "Start");
+        updateUi();
+        renderAnswerButtons();
+      }
+
+      function pauseGame() {
+        if (state.phase === "playing") {
+          state.phase = "paused";
+          showOverlay("Paused", `Score ${state.score}`, "Resume");
+        } else if (state.phase === "paused") {
+          state.phase = "playing";
+          state.lastTime = performance.now();
+          hideOverlay();
+        }
+        updateUi();
+        renderAnswerButtons();
+      }
+
+      function speedNow() {
+        const level = activeLevel();
+        const ramp = level.baseSpeed + state.elapsed * level.accel + Math.min(42, state.correct * 0.42);
+        return ramp * fallHeightScale() * FALL_SPEED_MULTIPLIER;
+      }
+
+      function answer(laneIndex, optionIndex) {
+        if (state.phase !== "playing") {
+          return;
+        }
+        const lane = state.lanes[laneIndex];
+        if (!lane || lane.locked) {
+          return;
+        }
+
+        const picked = lane.options[optionIndex];
+        if (picked === lane.word.japanese) {
+          lane.locked = true;
+          lane.flash = "correct";
+          lane.flashTime = 0.18;
+          state.correct += 1;
+          state.streak += 1;
+          const size = canvasSize();
+          const bottomBonus = Math.max(0, Math.round((1 - lane.y / (size.height - 92)) * 40));
+          const gain = 100 + activeLevel().bonus + bottomBonus + Math.min(90, state.streak * 3);
+          state.score += gain;
+          state.effects.push({ lane: laneIndex, text: `+${gain}`, y: lane.y, life: 0.7, color: "#8fc35d" });
+          addFeed(`${lane.word.english} = ${lane.word.japanese}`);
+          setTimeout(renderAnswerButtons, 180);
+          setTimeout(() => {
+            if (state.phase === "playing") {
+              spawnLane(laneIndex, true);
+              renderAnswerButtons();
+            }
+          }, 120);
+        } else {
+          lane.locked = true;
+          state.wrong += 1;
+          state.streak = 0;
+          state.score = Math.max(0, state.score - 20);
+          lane.shake = 8;
+          lane.flash = "wrong";
+          lane.flashTime = 0.22;
+          addReview(lane.word, picked, "wrong");
+          showAnswerReveal(laneIndex, lane);
+          state.effects.push({ lane: laneIndex, text: "-20", y: lane.y, life: 0.55, color: "#df6557" });
+          addFeed(`${lane.word.english}: 正解は ${lane.word.japanese}`);
+          setTimeout(() => {
+            if (state.phase === "playing") {
+              spawnLane(laneIndex, true);
+              renderAnswerButtons();
+            }
+          }, 180);
+        }
+        updateUi();
+        renderAnswerButtons();
+      }
+
+      function missLane(laneIndex) {
+        const lane = state.lanes[laneIndex];
+        state.miss += 1;
+        state.streak = 0;
+        state.score = Math.max(0, state.score - 35);
+        addReview(lane.word, null, "miss");
+        showAnswerReveal(laneIndex, lane);
+        state.effects.push({ lane: laneIndex, text: "MISS", y: missLineY(canvasSize()) + 8, life: 0.65, color: "#e0b34e" });
+        addFeed(`${lane.word.english} = ${lane.word.japanese}`);
+        spawnLane(laneIndex, true);
+        updateUi();
+        renderAnswerButtons();
+      }
+
+      function updateGame(dt) {
+        if (state.phase !== "playing") {
+          return;
+        }
+        state.elapsed += dt;
+        state.timeLeft -= dt;
+        if (state.timeLeft <= 0) {
+          state.timeLeft = 0;
+          finishGame();
+          return;
+        }
+
+        const size = canvasSize();
+        const speed = speedNow();
+        for (let i = 0; i < state.lanes.length; i += 1) {
+          const lane = state.lanes[i];
+          lane.shake = Math.max(0, lane.shake - 38 * dt);
+          lane.flashTime = Math.max(0, lane.flashTime - dt);
+          if (lane.locked) {
+            continue;
+          }
+          lane.y += speed * dt;
+          if (lane.y > missLineY(size)) {
+            missLane(i);
+          }
+        }
+
+        for (const effect of state.effects) {
+          effect.life -= dt;
+          effect.y -= 26 * dt;
+        }
+        state.effects = state.effects.filter((effect) => effect.life > 0);
+      }
+
+      function drawBoard() {
+        const size = canvasSize();
+        ctx.clearRect(0, 0, size.width, size.height);
+        ctx.fillStyle = "#0b0e10";
+        ctx.fillRect(0, 0, size.width, size.height);
+
+        const laneWidth = size.width / LANES;
+        for (let i = 0; i < LANES; i += 1) {
+          const x = i * laneWidth;
+          ctx.fillStyle = i % 2 === 0 ? "#101719" : "#131c1f";
+          ctx.fillRect(x, 0, laneWidth, size.height);
+
+          ctx.strokeStyle = "rgba(97, 191, 209, 0.22)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, size.height);
+          ctx.stroke();
+
+          ctx.fillStyle = "rgba(224, 179, 78, 0.16)";
+          ctx.fillRect(x + 12, missLineY(size) + 20, laneWidth - 24, 2);
+
+          ctx.fillStyle = "rgba(241, 244, 238, 0.16)";
+          ctx.font = "800 12px system-ui, sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText(`LANE ${i + 1}`, x + 16, 24);
+        }
+
+        ctx.strokeStyle = "rgba(97, 191, 209, 0.28)";
+        ctx.beginPath();
+        ctx.moveTo(size.width - 1, 0);
+        ctx.lineTo(size.width - 1, size.height);
+        ctx.stroke();
+
+        drawWords(size, laneWidth);
+        drawEffects(size, laneWidth);
+      }
+
+      function fitFont(text, maxWidth, base) {
+        let size = base;
+        ctx.font = `950 ${size}px system-ui, sans-serif`;
+        while (ctx.measureText(text).width > maxWidth && size > 18) {
+          size -= 1;
+          ctx.font = `950 ${size}px system-ui, sans-serif`;
+        }
+        return size;
+      }
+
+      function roundRect(x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + width - r, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+        ctx.lineTo(x + width, y + height - r);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+        ctx.lineTo(x + r, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      function drawWords(size, laneWidth) {
+        for (const lane of state.lanes) {
+          if (!lane) {
+            continue;
+          }
+          const laneX = lane.index * laneWidth;
+          const cardWidth = Math.min(laneWidth - 24, 282);
+          const cardHeight = 70;
+          const x = laneX + (laneWidth - cardWidth) / 2 + (lane.shake ? Math.sin(performance.now() / 28) * lane.shake : 0);
+          const y = lane.y;
+          const pulse = lane.flash === "correct" && lane.flashTime > 0 ? 1 : 0;
+          const glow = pulse ? "rgba(143, 195, 93, 0.52)" : "rgba(97, 191, 209, 0.22)";
+
+          ctx.save();
+          ctx.shadowColor = glow;
+          ctx.shadowBlur = 18;
+          roundRect(x, y, cardWidth, cardHeight, 8);
+          ctx.fillStyle = "#eef6f1";
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = pulse ? "#8fc35d" : "#61bfd1";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          const fontSize = fitFont(lane.word.english, cardWidth - 24, 35);
+          ctx.fillStyle = "#101416";
+          ctx.font = `950 ${fontSize}px system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(lane.word.english, x + cardWidth / 2, y + cardHeight / 2 + 1);
+          ctx.restore();
+        }
+      }
+
+      function drawEffects(size, laneWidth) {
+        for (const effect of state.effects) {
+          const alpha = Math.max(0, Math.min(1, effect.life / (effect.maxLife || 0.7)));
+          const laneCenter = effect.lane * laneWidth + laneWidth / 2;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          if (effect.type === "reveal") {
+            const progress = 1 - alpha;
+            const scale = 0.88 + Math.sin(Math.min(1, progress * 1.2) * Math.PI) * 0.38;
+            const cardWidth = Math.min(laneWidth - 14, 340) * scale;
+            const cardHeight = 92 * scale;
+            const x = laneCenter - cardWidth / 2;
+            const y = effect.y - cardHeight / 2;
+
+            ctx.shadowColor = "rgba(240, 206, 108, 0.58)";
+            ctx.shadowBlur = 22;
+            roundRect(x, y, cardWidth, cardHeight, 8);
+            ctx.fillStyle = "rgba(18, 25, 27, 0.95)";
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = effect.color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = "#f0ce6c";
+            const fontSize = fitFont(effect.text, cardWidth - 24, Math.round(44 * scale));
+            ctx.font = `950 ${Math.max(24, fontSize)}px system-ui, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(effect.text, laneCenter, effect.y + 1);
+          } else {
+            ctx.fillStyle = effect.color;
+            ctx.font = "950 22px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(effect.text, laneCenter, effect.y);
+          }
+          ctx.restore();
+        }
+      }
+
+      function showOverlay(title, copy, buttonText) {
+        ui.overlayTitle.textContent = title;
+        ui.overlayCopy.textContent = copy;
+        ui.reviewList.innerHTML = "";
+        ui.startButton.textContent = buttonText;
+        ui.overlay.classList.add("show");
+      }
+
+      function hideOverlay() {
+        ui.overlay.classList.remove("show");
+      }
+
+      function accuracy() {
+        const total = state.correct + state.wrong + state.miss;
+        return total ? Math.round((state.correct / total) * 100) : 0;
+      }
+
+      function updateUi() {
+        const level = activeLevel();
+        ui.phase.textContent = state.phase === "playing"
+          ? "Running"
+          : state.phase === "paused"
+            ? "Paused"
+            : state.phase === "over"
+              ? "Done"
+              : "Ready";
+        ui.difficultyLabel.textContent = level.label;
+        ui.time.textContent = String(Math.ceil(Math.max(0, state.timeLeft))).padStart(2, "0");
+        ui.timeBar.style.width = `${Math.max(0, Math.min(100, (state.timeLeft / RUN_TIME) * 100))}%`;
+        ui.score.textContent = String(state.score);
+        ui.best.textContent = String(Math.max(state.best, state.score));
+        ui.streak.textContent = String(state.streak);
+        ui.correct.textContent = String(state.correct);
+        ui.wrong.textContent = String(state.wrong);
+        ui.miss.textContent = String(state.miss);
+        ui.accuracy.textContent = `${accuracy()}%`;
+
+        const canPause = state.phase === "playing" || state.phase === "paused";
+        ui.pauseButton.disabled = !canPause;
+        ui.pauseButton.title = state.phase === "paused" ? "再開" : "一時停止";
+        ui.pauseButton.setAttribute("aria-label", ui.pauseButton.title);
+        ui.pauseIcon.classList.toggle("hidden", state.phase === "paused");
+        ui.playIcon.classList.toggle("hidden", state.phase !== "paused");
+        ui.difficulty.disabled = state.phase === "playing" || state.phase === "paused";
+      }
+
+      function gameLoop(now) {
+        const dt = Math.min(0.08, (now - state.lastTime) / 1000 || 0);
+        state.lastTime = now;
+        updateGame(dt);
+        drawBoard();
+        updateUi();
+        requestAnimationFrame(gameLoop);
+      }
+
+      function keyToLane(key) {
+        for (let lane = 0; lane < laneKeys.length; lane += 1) {
+          const option = laneKeys[lane].indexOf(key);
+          if (option >= 0) {
+            return { lane, option };
+          }
+        }
+        return null;
+      }
+
+      function attachEvents() {
+        ui.startButton.addEventListener("click", () => {
+          if (state.phase === "paused") {
+            pauseGame();
+          } else {
+            startGame();
+          }
+        });
+        ui.restartButton.addEventListener("click", resetGame);
+        ui.pauseButton.addEventListener("click", pauseGame);
+        ui.difficulty.addEventListener("change", () => {
+          if (state.phase === "ready" || state.phase === "over") {
+            state.difficulty = ui.difficulty.value;
+            state.best = readBest();
+            updateUi();
+            showOverlay("Word Fall", `${activeLevel().label}`, "Start");
+          }
+        });
+        window.addEventListener("resize", () => {
+          resizeCanvas();
+          drawBoard();
+        });
+        window.addEventListener("keydown", (event) => {
+          const key = event.key.toLowerCase();
+          const mapped = keyToLane(key);
+          if (mapped) {
+            event.preventDefault();
+            answer(mapped.lane, mapped.option);
+            return;
+          }
+          if ((key === "enter" || key === " ") && (state.phase === "ready" || state.phase === "over")) {
+            event.preventDefault();
+            startGame();
+            return;
+          }
+          if (key === "p" || key === "escape") {
+            event.preventDefault();
+            pauseGame();
+          }
+        });
+      }
+
+      function init() {
+        state.difficulty = ui.difficulty.value;
+        state.best = readBest();
+        state.lastTime = performance.now();
+        makeLanes();
+        resizeCanvas();
+        renderFeed();
+        renderAnswerButtons();
+        updateUi();
+        drawBoard();
+        attachEvents();
+        requestAnimationFrame(gameLoop);
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
