@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vocab Sprint</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-theme="dark" data-lanes="3">
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Vocab Sprint</h1>
+        <div class="phase" id="phaseLabel">Loading</div>
+      </div>
+      <div class="toolbar">
+        <select id="levelSelect" aria-label="レベル">
+          <option value="elementary3">小学校3年</option>
+          <option value="elementary4">小学校4年</option>
+          <option value="elementary5">小学校5年</option>
+          <option value="elementary6">小学校6年</option>
+          <option value="junior1-part1">中学校1年 Part1</option>
+          <option value="junior1-part2">中学校1年 Part2</option>
+          <option value="junior1-part3">中学校1年 Part3</option>
+          <option value="junior2-part1">中学校2年 Part1</option>
+          <option value="junior2-part2">中学校2年 Part2</option>
+          <option value="junior2-part3">中学校2年 Part3</option>
+          <option value="junior3-part1">中学校3年 Part1</option>
+          <option value="junior3-part2">中学校3年 Part2</option>
+          <option value="junior3-part3">中学校3年 Part3</option>
+          <option value="high1-part1">高校1年 Part1</option>
+          <option value="high1-part2">高校1年 Part2</option>
+          <option value="high1-part3">高校1年 Part3</option>
+          <option value="high1-part4">高校1年 Part4</option>
+          <option value="high2-part1">高校2年 Part1</option>
+          <option value="high2-part2">高校2年 Part2</option>
+          <option value="high2-part3">高校2年 Part3</option>
+          <option value="high2-part4">高校2年 Part4</option>
+          <option value="high3-part1">高校3年 Part1</option>
+          <option value="high3-part2">高校3年 Part2</option>
+          <option value="high3-part3">高校3年 Part3</option>
+          <option value="high3-part4">高校3年 Part4</option>
+        </select>
+        <select class="lane-count-select" id="laneCountSelect" aria-label="レーン数">
+          <option value="1">1レーン</option>
+          <option value="2">2レーン</option>
+          <option value="3" selected>3レーン</option>
+        </select>
+        <button class="icon-button" id="soundButton" type="button" title="サウンド ON" aria-label="サウンド ON">
+          <svg class="sound-on-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
+            <path d="M16 9.5a4 4 0 0 1 0 5"></path>
+            <path d="M18.5 7a7 7 0 0 1 0 10"></path>
+          </svg>
+          <svg class="sound-off-icon hidden" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
+            <path d="M19 9l-6 6"></path>
+            <path d="M13 9l6 6"></path>
+          </svg>
+        </button>
+        <button class="icon-button" id="themeButton" type="button" title="ライトモード" aria-label="ライトモード">
+          <svg class="theme-light-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2"></path>
+            <path d="M12 20v2"></path>
+            <path d="M4.93 4.93l1.41 1.41"></path>
+            <path d="M17.66 17.66l1.41 1.41"></path>
+            <path d="M2 12h2"></path>
+            <path d="M20 12h2"></path>
+            <path d="M4.93 19.07l1.41-1.41"></path>
+            <path d="M17.66 6.34l1.41-1.41"></path>
+          </svg>
+          <svg class="theme-dark-icon hidden" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
+          </svg>
+        </button>
+        <button class="icon-button" id="pauseButton" type="button" title="一時停止" aria-label="一時停止" disabled>
+          <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14"></path>
+            <path d="M16 5v14"></path>
+          </svg>
+          <svg class="play-icon hidden" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5l11 7-11 7z"></path>
+          </svg>
+        </button>
+        <button class="icon-button" id="restartButton" type="button" title="リセット" aria-label="リセット">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66"></path>
+            <path d="M20 4v6h-6"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="main">
+      <div class="game-shell">
+        <canvas id="gameCanvas" width="900" height="620"></canvas>
+        <div class="answers" id="answers"></div>
+        <div class="overlay show" id="overlay">
+          <div class="overlay-panel">
+            <h2 id="overlayTitle">Vocab Sprint</h2>
+            <p id="overlayCopy">Loading</p>
+            <div class="review-list" id="reviewList"></div>
+            <button class="start-button" id="startButton" type="button" disabled>Start</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hud">
+        <section class="timer-block">
+          <div class="label-row">
+            <span>Time</span>
+            <span id="levelLabel">小学校3年</span>
+          </div>
+          <div class="timer-value" id="timeValue">60</div>
+          <div class="meter" aria-hidden="true">
+            <div class="meter-fill" id="timeBar"></div>
+          </div>
+        </section>
+
+        <section class="stats">
+          <div class="stat-row"><span>Score</span><strong id="scoreValue">0</strong></div>
+          <div class="stat-row"><span>Best</span><strong id="bestValue">0</strong></div>
+          <div class="stat-row"><span>Streak</span><strong id="streakValue">0</strong></div>
+        </section>
+
+        <div class="divider" aria-hidden="true"></div>
+
+        <section class="stats">
+          <div class="stat-row"><span>Correct</span><strong id="correctValue">0</strong></div>
+          <div class="stat-row"><span>Wrong</span><strong id="wrongValue">0</strong></div>
+          <div class="stat-row"><span>Miss</span><strong id="missValue">0</strong></div>
+          <div class="stat-row"><span>Accuracy</span><strong id="accuracyValue">0%</strong></div>
+        </section>
+
+        <section class="level-meta" aria-label="単語データ">
+          <div class="stat-row"><span>Words</span><strong id="wordCountValue">0</strong></div>
+        </section>
+
+        <section class="feed" id="feed" aria-label="ログ"></section>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
