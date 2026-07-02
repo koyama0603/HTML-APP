@@ -11,8 +11,8 @@ export const DEFAULT_PREFERENCES = {
 };
 
 export const DEFAULT_GAME_SETTINGS = {
-  correctTimeBonus: 0.1,
-  streakTimeMultiplier: 0.01,
+  correctTimeBonus: 0.11,
+  streakTimeMultiplier: 0.02,
   wrongTimePenalty: 0.7,
   bgmEnabled: true,
   sfxEnabled: true,

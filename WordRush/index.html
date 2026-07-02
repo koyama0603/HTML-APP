@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Word Rush</title>
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml" sizes="any">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body data-theme="dark" data-lanes="3">
@@ -139,38 +140,12 @@
                 <div class="title-guide">
                   <span>落ちてくる英単語を素早く消していくゲームです。</span>
                   <span>落ちてくる英単語の正しい日本語訳を選んでください。</span>
-                  <span>1-9のキー操作、タップやクリックで選びます。</span>
+                  <span>表示されているキー、タップやクリックで選びます。</span>
                   <span>ブラウザのキャッシュを消去するとハイスコアやプレイ回数などが消えます。</span>
-                </div>
-                <div class="settings-grid" aria-label="速度と時間の設定">
-                  <label>
-                    <span>正解時 +秒</span>
-                    <input id="correctTimeInput" type="number" min="0" max="20" step="0.001">
-                  </label>
-                  <label>
-                    <span>連続正解係数</span>
-                    <input id="streakTimeInput" type="number" min="0" max="5" step="0.001">
-                  </label>
-                  <label>
-                    <span>失敗時 -秒</span>
-                    <input id="wrongTimeInput" type="number" min="0" max="20" step="0.001">
-                  </label>
                 </div>
               </div>
               <div class="review-list" id="reviewList"></div>
             </div>
-          </div>
-        </div>
-        <div class="link-modal hidden" id="linkModal" aria-hidden="true">
-          <div class="link-modal-panel" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
-            <div class="link-modal-bar">
-              <strong id="linkModalTitle">Reference</strong>
-              <div class="link-modal-actions">
-                <a id="linkModalOpen" href="#" target="_blank" rel="noopener noreferrer">別タブで開く</a>
-                <button id="linkModalClose" type="button" aria-label="閉じる">×</button>
-              </div>
-            </div>
-            <iframe id="linkModalFrame" title="Reference page" loading="lazy"></iframe>
           </div>
         </div>
       </div>

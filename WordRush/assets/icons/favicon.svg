@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Word Rush icon</title>
+  <defs>
+    <linearGradient id="bg" x1="72" y1="52" x2="438" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10252a"/>
+      <stop offset="0.48" stop-color="#173238"/>
+      <stop offset="1" stop-color="#0d1214"/>
+    </linearGradient>
+    <linearGradient id="card" x1="154" y1="124" x2="350" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fff7"/>
+      <stop offset="1" stop-color="#dcefed"/>
+    </linearGradient>
+    <linearGradient id="rush" x1="98" y1="95" x2="364" y2="356" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#61bfd1"/>
+      <stop offset="0.52" stop-color="#f0ce6c"/>
+      <stop offset="1" stop-color="#df6557"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M74 378c82-54 158-66 246-32 44 17 80 20 122 3" fill="none" stroke="#61bfd1" stroke-width="18" stroke-linecap="round" opacity=".28"/>
+  <path d="M72 425c95-55 181-61 275-22 33 14 62 16 95 3" fill="none" stroke="#f0ce6c" stroke-width="14" stroke-linecap="round" opacity=".24"/>
+  <path d="M100 118h160" fill="none" stroke="url(#rush)" stroke-width="24" stroke-linecap="round" opacity=".9"/>
+  <path d="M76 178h122" fill="none" stroke="#61bfd1" stroke-width="18" stroke-linecap="round" opacity=".72"/>
+  <path d="M104 238h86" fill="none" stroke="#f0ce6c" stroke-width="14" stroke-linecap="round" opacity=".84"/>
+  <g transform="rotate(-8 267 222)">
+    <rect x="154" y="132" width="226" height="168" rx="42" fill="url(#card)" stroke="#61bfd1" stroke-width="10"/>
+    <path d="M190 175h30l24 72 28-72h26l28 72 24-72h30l-39 101h-30l-26-63-26 63h-30l-39-101z" fill="#10252a"/>
+    <rect x="198" y="300" width="140" height="18" rx="9" fill="#df6557" opacity=".92"/>
+  </g>
+  <circle cx="374" cy="101" r="22" fill="#f0ce6c"/>
+  <circle cx="417" cy="149" r="12" fill="#61bfd1"/>
+  <circle cx="354" cy="399" r="15" fill="#df6557"/>
+  <path d="M403 302l18 18 18-18 18 18" fill="none" stroke="#f8fff7" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity=".82"/>
+</svg>
