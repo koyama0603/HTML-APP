@@ -3,61 +3,56 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vocab Sprint</title>
+  <title>Word Rush</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body data-theme="dark" data-lanes="3">
   <main class="app">
     <header class="topbar">
       <div class="brand">
-        <h1>Vocab Sprint</h1>
+        <h1>Word Rush</h1>
         <div class="phase" id="phaseLabel">Loading</div>
       </div>
       <div class="toolbar">
-        <select id="levelSelect" aria-label="レベル">
-          <option value="elementary3">小学校3年</option>
-          <option value="elementary4">小学校4年</option>
-          <option value="elementary5">小学校5年</option>
-          <option value="elementary6">小学校6年</option>
-          <option value="junior1-part1">中学校1年 Part1</option>
-          <option value="junior1-part2">中学校1年 Part2</option>
-          <option value="junior1-part3">中学校1年 Part3</option>
-          <option value="junior2-part1">中学校2年 Part1</option>
-          <option value="junior2-part2">中学校2年 Part2</option>
-          <option value="junior2-part3">中学校2年 Part3</option>
-          <option value="junior3-part1">中学校3年 Part1</option>
-          <option value="junior3-part2">中学校3年 Part2</option>
-          <option value="junior3-part3">中学校3年 Part3</option>
-          <option value="high1-part1">高校1年 Part1</option>
-          <option value="high1-part2">高校1年 Part2</option>
-          <option value="high1-part3">高校1年 Part3</option>
-          <option value="high1-part4">高校1年 Part4</option>
-          <option value="high2-part1">高校2年 Part1</option>
-          <option value="high2-part2">高校2年 Part2</option>
-          <option value="high2-part3">高校2年 Part3</option>
-          <option value="high2-part4">高校2年 Part4</option>
-          <option value="high3-part1">高校3年 Part1</option>
-          <option value="high3-part2">高校3年 Part2</option>
-          <option value="high3-part3">高校3年 Part3</option>
-          <option value="high3-part4">高校3年 Part4</option>
-        </select>
-        <select class="lane-count-select" id="laneCountSelect" aria-label="レーン数">
-          <option value="1">1レーン</option>
-          <option value="2">2レーン</option>
-          <option value="3" selected>3レーン</option>
-        </select>
-        <button class="icon-button" id="soundButton" type="button" title="サウンド ON" aria-label="サウンド ON">
-          <svg class="sound-on-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
-            <path d="M16 9.5a4 4 0 0 1 0 5"></path>
-            <path d="M18.5 7a7 7 0 0 1 0 10"></path>
-          </svg>
-          <svg class="sound-off-icon hidden" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
-            <path d="M19 9l-6 6"></path>
-            <path d="M13 9l6 6"></path>
-          </svg>
-        </button>
+        <div class="sound-control">
+          <button class="icon-button" id="soundButton" type="button" title="音設定" aria-label="音設定" aria-expanded="false">
+            <svg class="sound-on-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
+              <path d="M16 9.5a4 4 0 0 1 0 5"></path>
+              <path d="M18.5 7a7 7 0 0 1 0 10"></path>
+            </svg>
+            <svg class="sound-off-icon hidden" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
+              <path d="M19 9l-6 6"></path>
+              <path d="M13 9l6 6"></path>
+            </svg>
+          </button>
+          <div class="sound-panel hidden" id="soundPanel" role="dialog" aria-label="音設定">
+            <div class="panel-title">音設定</div>
+            <label class="switch-row">
+              <span>BGM</span>
+              <input id="bgmEnabledInput" type="checkbox">
+            </label>
+            <label class="range-row">
+              <span>BGM音量</span>
+              <input id="bgmVolumeInput" type="range" min="0" max="1" step="0.01">
+              <strong id="bgmVolumeValue">16%</strong>
+            </label>
+            <label class="select-row">
+              <span>BGM曲</span>
+              <select id="bgmTrackSelect"></select>
+            </label>
+            <label class="switch-row">
+              <span>効果音</span>
+              <input id="sfxEnabledInput" type="checkbox">
+            </label>
+            <label class="range-row">
+              <span>効果音量</span>
+              <input id="sfxVolumeInput" type="range" min="0" max="1" step="0.01">
+              <strong id="sfxVolumeValue">52%</strong>
+            </label>
+          </div>
+        </div>
         <button class="icon-button" id="themeButton" type="button" title="ライトモード" aria-label="ライトモード">
           <svg class="theme-light-icon" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>
@@ -83,11 +78,12 @@
             <path d="M8 5l11 7-11 7z"></path>
           </svg>
         </button>
-        <button class="icon-button" id="restartButton" type="button" title="リセット" aria-label="リセット">
+        <button class="back-button" id="backButton" type="button" title="戻る" aria-label="戻る">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M20 12a8 8 0 1 1-2.34-5.66"></path>
-            <path d="M20 4v6h-6"></path>
+            <path d="M19 12H5"></path>
+            <path d="M12 19l-7-7 7-7"></path>
           </svg>
+          <span>戻る</span>
         </button>
       </div>
     </header>
@@ -98,10 +94,83 @@
         <div class="answers" id="answers"></div>
         <div class="overlay show" id="overlay">
           <div class="overlay-panel">
-            <h2 id="overlayTitle">Vocab Sprint</h2>
+            <h2 id="overlayTitle">Word Rush</h2>
             <p id="overlayCopy">Loading</p>
-            <div class="review-list" id="reviewList"></div>
-            <button class="start-button" id="startButton" type="button" disabled>Start</button>
+            <div class="overlay-actions">
+              <button class="start-button" id="startButton" type="button" disabled>Start</button>
+              <button class="secondary-button hidden" id="overlayBackButton" type="button">戻る</button>
+            </div>
+            <div class="overlay-scroll">
+              <div class="title-details" id="titleDetails">
+                <input id="levelSelect" type="hidden" value="elementary3">
+                <div class="title-control-grid">
+                  <div class="title-control">
+                    <span>レベル</span>
+                    <div class="level-picker" id="levelPicker">
+                      <button class="level-picker-button" id="levelButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="level-picker-label" id="levelButtonLabel">Loading</span>
+                        <span class="level-picker-meta" id="levelButtonMeta">0回</span>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M6 9l6 6 6-6"></path>
+                        </svg>
+                      </button>
+                      <div class="level-menu hidden" id="levelMenu" role="listbox" aria-label="レベル選択"></div>
+                    </div>
+                  </div>
+                  <label class="title-control">
+                    <span>レーン</span>
+                    <select class="lane-count-select" id="laneCountSelect" aria-label="レーン数">
+                      <option value="1">1レーン</option>
+                      <option value="2" selected>2レーン</option>
+                      <option value="3">3レーン</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="title-current">
+                  <div>
+                    <span>現在の設定</span>
+                    <strong id="currentLevelValue">小学校3年</strong>
+                  </div>
+                  <div>
+                    <span>レーン</span>
+                    <strong id="currentLaneValue">3レーン</strong>
+                  </div>
+                </div>
+                <div class="title-guide">
+                  <span>落ちてくる英単語を素早く消していくゲームです。</span>
+                  <span>落ちてくる英単語の正しい日本語訳を選んでください。</span>
+                  <span>1-9のキー操作、タップやクリックで選びます。</span>
+                  <span>ブラウザのキャッシュを消去するとハイスコアやプレイ回数などが消えます。</span>
+                </div>
+                <div class="settings-grid" aria-label="速度と時間の設定">
+                  <label>
+                    <span>正解時 +秒</span>
+                    <input id="correctTimeInput" type="number" min="0" max="20" step="0.001">
+                  </label>
+                  <label>
+                    <span>連続正解係数</span>
+                    <input id="streakTimeInput" type="number" min="0" max="5" step="0.001">
+                  </label>
+                  <label>
+                    <span>失敗時 -秒</span>
+                    <input id="wrongTimeInput" type="number" min="0" max="20" step="0.001">
+                  </label>
+                </div>
+              </div>
+              <div class="review-list" id="reviewList"></div>
+            </div>
+          </div>
+        </div>
+        <div class="link-modal hidden" id="linkModal" aria-hidden="true">
+          <div class="link-modal-panel" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
+            <div class="link-modal-bar">
+              <strong id="linkModalTitle">Reference</strong>
+              <div class="link-modal-actions">
+                <a id="linkModalOpen" href="#" target="_blank" rel="noopener noreferrer">別タブで開く</a>
+                <button id="linkModalClose" type="button" aria-label="閉じる">×</button>
+              </div>
+            </div>
+            <iframe id="linkModalFrame" title="Reference page" loading="lazy"></iframe>
           </div>
         </div>
       </div>
@@ -109,10 +178,16 @@
       <aside class="hud">
         <section class="timer-block">
           <div class="label-row">
-            <span>Time</span>
+            <span>Time Left</span>
             <span id="levelLabel">小学校3年</span>
           </div>
-          <div class="timer-value" id="timeValue">60</div>
+          <div class="timer-line">
+            <div class="timer-value" id="timeValue">60</div>
+            <div class="elapsed-value">
+              <span>Played</span>
+              <strong id="elapsedValue">0:00</strong>
+            </div>
+          </div>
           <div class="meter" aria-hidden="true">
             <div class="meter-fill" id="timeBar"></div>
           </div>

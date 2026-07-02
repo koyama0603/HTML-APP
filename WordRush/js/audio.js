@@ -1,12 +1,52 @@
 export class AudioEngine {
-  constructor(isEnabled, bgmSrc = "assets/audio/Coffee_and_Logic.mp3") {
-    this.isEnabled = isEnabled;
-    this.bgmSrc = bgmSrc;
-    this.bgmVolume = 0.16;
+  constructor(getSettings, bgmTracks = []) {
+    this.getSettings = getSettings;
+    this.bgmTracks = bgmTracks;
+    this.currentTrackId = "";
     this.bgmAudio = null;
+    this.bgmFadeTimer = 0;
     this.ctx = null;
     this.master = null;
     this.supported = Boolean(globalThis.AudioContext || globalThis.webkitAudioContext);
+  }
+
+  settings() {
+    return this.getSettings?.() || {};
+  }
+
+  clampVolume(value, fallback) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return fallback;
+    }
+    return Math.max(0, Math.min(1, number));
+  }
+
+  bgmEnabled() {
+    return this.settings().bgmEnabled !== false;
+  }
+
+  sfxEnabled() {
+    return this.settings().sfxEnabled !== false;
+  }
+
+  bgmVolume() {
+    return this.clampVolume(this.settings().bgmVolume, 0.15);
+  }
+
+  sfxVolume() {
+    return this.clampVolume(this.settings().sfxVolume, 0.7);
+  }
+
+  setTracks(tracks) {
+    this.bgmTracks = Array.isArray(tracks) ? tracks : [];
+  }
+
+  clearBgmFade() {
+    if (this.bgmFadeTimer) {
+      clearInterval(this.bgmFadeTimer);
+      this.bgmFadeTimer = 0;
+    }
   }
 
   init() {
@@ -17,9 +57,9 @@ export class AudioEngine {
       const AudioContextClass = globalThis.AudioContext || globalThis.webkitAudioContext;
       this.ctx = new AudioContextClass();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.52;
       this.master.connect(this.ctx.destination);
     }
+    this.master.gain.value = this.sfxVolume();
     if (this.ctx.state === "suspended") {
       this.ctx.resume().catch(() => {});
     }
@@ -31,7 +71,7 @@ export class AudioEngine {
   }
 
   playTone(frequency, start, duration, type, gainValue, destination = this.master) {
-    if (!this.ctx || !this.isEnabled() || !destination) {
+    if (!this.ctx || !this.sfxEnabled() || !destination) {
       return;
     }
     const osc = this.ctx.createOscillator();
@@ -48,7 +88,7 @@ export class AudioEngine {
   }
 
   playNoise(start, duration, gainValue) {
-    if (!this.ctx || !this.isEnabled()) {
+    if (!this.ctx || !this.sfxEnabled()) {
       return;
     }
     const sampleRate = this.ctx.sampleRate;
@@ -71,34 +111,108 @@ export class AudioEngine {
     source.start(start);
   }
 
-  startBgm(getPhase, options = {}) {
-    if (!this.isEnabled() || getPhase() !== "playing" || !globalThis.Audio) {
-      return;
+  chooseTrack(restart = false) {
+    if (!this.bgmTracks.length) {
+      return null;
+    }
+
+    const requested = this.settings().bgmTrack || "random";
+    if (requested !== "random") {
+      return this.bgmTracks.find((track) => track.id === requested) || this.bgmTracks[0];
+    }
+
+    if (!restart && this.currentTrackId) {
+      return this.bgmTracks.find((track) => track.id === this.currentTrackId) || this.bgmTracks[0];
+    }
+
+    const index = Math.floor(Math.random() * this.bgmTracks.length);
+    return this.bgmTracks[index] || this.bgmTracks[0];
+  }
+
+  ensureBgmAudio(track, restart = false) {
+    if (!track || !globalThis.Audio) {
+      return null;
     }
     if (!this.bgmAudio) {
-      this.bgmAudio = new Audio(this.bgmSrc);
+      this.bgmAudio = new Audio(track.src);
       this.bgmAudio.loop = true;
       this.bgmAudio.preload = "auto";
     }
-    this.bgmAudio.volume = this.bgmVolume;
-    if (options.restart) {
+    if (this.currentTrackId !== track.id) {
+      this.bgmAudio.src = track.src;
+      restart = true;
+    }
+    this.currentTrackId = track.id;
+    this.bgmAudio.loop = true;
+    this.bgmAudio.volume = this.bgmVolume();
+    if (restart) {
       this.bgmAudio.currentTime = 0;
     }
-    this.bgmAudio.play().catch(() => {
+    return this.bgmAudio;
+  }
+
+  startBgm(getPhase, options = {}) {
+    if (!this.bgmEnabled() || getPhase() !== "playing" || !globalThis.Audio) {
+      return;
+    }
+    this.clearBgmFade();
+    const track = this.chooseTrack(Boolean(options.restart));
+    const audio = this.ensureBgmAudio(track, Boolean(options.restart));
+    if (!audio) {
+      return;
+    }
+    audio.play().catch(() => {
       // Browsers can reject playback until the next direct user gesture.
     });
   }
 
+  applySettings(getPhase) {
+    if (this.master) {
+      this.master.gain.value = this.sfxVolume();
+    }
+    if (this.bgmAudio) {
+      this.bgmAudio.volume = this.bgmVolume();
+    }
+    if (!this.bgmEnabled()) {
+      this.stopBgm();
+      return;
+    }
+    if (getPhase?.() === "playing") {
+      this.startBgm(getPhase);
+    }
+  }
+
   stopBgm() {
+    this.clearBgmFade();
     if (this.bgmAudio) {
       this.bgmAudio.pause();
     }
   }
 
-  playSfx(kind) {
-    if (!this.isEnabled() || !this.init()) {
+  fadeOutBgm(durationMs = 1200) {
+    if (!this.bgmAudio || this.bgmAudio.paused) {
       return;
     }
+    this.clearBgmFade();
+    const audio = this.bgmAudio;
+    const startVolume = audio.volume;
+    const startedAt = Date.now();
+    this.bgmFadeTimer = setInterval(() => {
+      const progress = Math.min(1, (Date.now() - startedAt) / durationMs);
+      audio.volume = startVolume * (1 - progress);
+      if (progress >= 1) {
+        this.clearBgmFade();
+        audio.pause();
+        audio.volume = this.bgmVolume();
+      }
+    }, 40);
+  }
+
+  playSfx(kind) {
+    if (!this.sfxEnabled() || !this.init()) {
+      return;
+    }
+    this.master.gain.value = this.sfxVolume();
     const now = this.ctx.currentTime;
     if (kind === "start") {
       this.playTone(523.25, now, 0.08, "triangle", 0.08);

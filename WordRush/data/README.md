@@ -1,4 +1,4 @@
-# Vocab Sprint Word Data
+# Word Rush Word Data
 
 The CSV files in this folder are loaded by level when the user changes the level selector.
 

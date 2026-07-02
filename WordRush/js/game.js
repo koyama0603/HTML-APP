@@ -1,19 +1,27 @@
 import { AudioEngine } from "./audio.js";
-import { LEVEL_MAP } from "./levels.js";
+import { BGM_TRACKS } from "./audio-tracks.js";
+import {
+  APP_TITLE,
+  DEFAULT_GAME_SETTINGS,
+  DEFAULT_PREFERENCES,
+  PLAY_COUNTS_STORAGE_KEY,
+  PREFERENCES_STORAGE_KEY,
+  SETTINGS_STORAGE_KEY,
+  THEME_STORAGE_KEY
+} from "./config.js";
+import { LEVELS, LEVEL_MAP } from "./levels.js";
 import { loadWords } from "./words.js";
 
 const RUN_TIME = 60;
 const MAX_LANES = 3;
-const DEFAULT_LANES = 3;
 const STORAGE_PREFIX = "vocab-sprint-best-";
-const THEME_STORAGE_KEY = "vocab-sprint-theme";
-const MISS_LINE_OFFSET = 98;
+const OLD_THEME_STORAGE_KEY = "vocab-sprint-theme";
+const CARD_START_Y = 14;
 const FALL_REFERENCE_DISTANCE = 394;
 const FALL_SPEED_MULTIPLIER = 0.5;
 const STREAK_SPEED_BONUS = 0.95;
-const CORRECT_TIME_BONUS = 2;
-const STREAK_TIME_BONUS = 0.1;
-const WRONG_TIME_PENALTY = 1;
+const CARD_FADE_IN_TIME = 0.18;
+const CARD_FADE_OUT_TIME = 0.24;
 const ANSWER_REVEAL_TIME = 1.12;
 const LANE_KEYS = [
   ["1", "2", "3"],
@@ -28,25 +36,53 @@ export class VocabSprintGame {
     this.ui = {
       phase: document.getElementById("phaseLabel"),
       level: document.getElementById("levelSelect"),
+      levelButton: document.getElementById("levelButton"),
+      levelButtonLabel: document.getElementById("levelButtonLabel"),
+      levelButtonMeta: document.getElementById("levelButtonMeta"),
+      levelPicker: document.getElementById("levelPicker"),
+      levelMenu: document.getElementById("levelMenu"),
       laneCount: document.getElementById("laneCountSelect"),
       levelLabel: document.getElementById("levelLabel"),
       soundButton: document.getElementById("soundButton"),
       soundOnIcon: document.querySelector(".sound-on-icon"),
       soundOffIcon: document.querySelector(".sound-off-icon"),
+      soundPanel: document.getElementById("soundPanel"),
+      bgmEnabled: document.getElementById("bgmEnabledInput"),
+      bgmVolume: document.getElementById("bgmVolumeInput"),
+      bgmVolumeValue: document.getElementById("bgmVolumeValue"),
+      bgmTrack: document.getElementById("bgmTrackSelect"),
+      sfxEnabled: document.getElementById("sfxEnabledInput"),
+      sfxVolume: document.getElementById("sfxVolumeInput"),
+      sfxVolumeValue: document.getElementById("sfxVolumeValue"),
       themeButton: document.getElementById("themeButton"),
       themeLightIcon: document.querySelector(".theme-light-icon"),
       themeDarkIcon: document.querySelector(".theme-dark-icon"),
       pauseButton: document.getElementById("pauseButton"),
       pauseIcon: document.querySelector(".pause-icon"),
       playIcon: document.querySelector(".play-icon"),
-      restartButton: document.getElementById("restartButton"),
+      backButton: document.getElementById("backButton"),
+      gameShell: document.querySelector(".game-shell"),
       answers: document.getElementById("answers"),
       overlay: document.getElementById("overlay"),
       overlayTitle: document.getElementById("overlayTitle"),
       overlayCopy: document.getElementById("overlayCopy"),
+      overlayScroll: document.querySelector(".overlay-scroll"),
+      titleDetails: document.getElementById("titleDetails"),
+      currentLevel: document.getElementById("currentLevelValue"),
+      currentLane: document.getElementById("currentLaneValue"),
+      correctTime: document.getElementById("correctTimeInput"),
+      streakTime: document.getElementById("streakTimeInput"),
+      wrongTime: document.getElementById("wrongTimeInput"),
       reviewList: document.getElementById("reviewList"),
+      linkModal: document.getElementById("linkModal"),
+      linkModalTitle: document.getElementById("linkModalTitle"),
+      linkModalFrame: document.getElementById("linkModalFrame"),
+      linkModalOpen: document.getElementById("linkModalOpen"),
+      linkModalClose: document.getElementById("linkModalClose"),
       startButton: document.getElementById("startButton"),
+      overlayBackButton: document.getElementById("overlayBackButton"),
       time: document.getElementById("timeValue"),
+      elapsed: document.getElementById("elapsedValue"),
       timeBar: document.getElementById("timeBar"),
       score: document.getElementById("scoreValue"),
       best: document.getElementById("bestValue"),
@@ -59,10 +95,17 @@ export class VocabSprintGame {
       feed: document.getElementById("feed")
     };
 
+    const preferences = this.readPreferences();
+    const configuredLevelId = LEVEL_MAP.has(DEFAULT_PREFERENCES.levelId) ? DEFAULT_PREFERENCES.levelId : this.ui.level.value;
+    const initialLevelId = LEVEL_MAP.has(preferences.levelId) ? preferences.levelId : configuredLevelId;
+    const initialLaneCount = this.clampLaneCount(preferences.laneCount);
+    this.ui.level.value = initialLevelId;
+    this.ui.laneCount.value = String(initialLaneCount);
+
     this.state = {
       phase: "loading",
-      levelId: this.ui.level.value,
-      laneCount: DEFAULT_LANES,
+      levelId: initialLevelId,
+      laneCount: initialLaneCount,
       words: [],
       lanes: [],
       score: 0,
@@ -78,22 +121,29 @@ export class VocabSprintGame {
       review: new Map(),
       recent: [],
       effects: [],
-      audioEnabled: true,
+      wordBag: [],
+      settings: this.readSettings(),
+      playCounts: this.readPlayCounts(),
       theme: this.readTheme(),
+      levelMenuOpen: false,
+      soundPanelOpen: false,
       rngSeed: 1,
       loadError: ""
     };
 
     this.loadToken = 0;
     this.resizeObserver = null;
-    this.audio = new AudioEngine(() => this.state.audioEnabled);
+    this.audio = new AudioEngine(() => this.state.settings, BGM_TRACKS);
   }
 
   async init() {
     this.applyTheme(this.state.theme);
-    this.state.laneCount = Number(this.ui.laneCount.value) || DEFAULT_LANES;
+    this.state.laneCount = this.clampLaneCount(this.ui.laneCount.value);
     this.state.lastTime = performance.now();
     this.resizeCanvas();
+    this.populateBgmTracks();
+    this.syncSettingsInputs();
+    this.renderLevelPicker();
     this.renderFeed();
     this.renderAnswerButtons();
     this.updateUi();
@@ -108,8 +158,104 @@ export class VocabSprintGame {
     return LEVEL_MAP.get(this.state.levelId) || LEVEL_MAP.values().next().value;
   }
 
+  clampLaneCount(value) {
+    return Math.max(1, Math.min(MAX_LANES, Number(value) || DEFAULT_PREFERENCES.laneCount));
+  }
+
   activeLaneCount() {
-    return Math.max(1, Math.min(MAX_LANES, Number(this.state.laneCount) || DEFAULT_LANES));
+    return this.clampLaneCount(this.state.laneCount);
+  }
+
+  clampNumber(value, fallback, min, max) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return fallback;
+    }
+    return Math.max(min, Math.min(max, number));
+  }
+
+  clampDecimalSetting(value, fallback, min, max) {
+    return Math.round(this.clampNumber(value, fallback, min, max) * 1000) / 1000;
+  }
+
+  normalizeSettings(settings = {}) {
+    return {
+      ...DEFAULT_GAME_SETTINGS,
+      correctTimeBonus: this.clampDecimalSetting(settings.correctTimeBonus, DEFAULT_GAME_SETTINGS.correctTimeBonus, 0, 20),
+      streakTimeMultiplier: this.clampDecimalSetting(settings.streakTimeMultiplier, DEFAULT_GAME_SETTINGS.streakTimeMultiplier, 0, 5),
+      wrongTimePenalty: this.clampDecimalSetting(settings.wrongTimePenalty, DEFAULT_GAME_SETTINGS.wrongTimePenalty, 0, 20),
+      bgmEnabled: settings.bgmEnabled !== false,
+      sfxEnabled: settings.sfxEnabled !== false,
+      bgmVolume: this.clampNumber(settings.bgmVolume, DEFAULT_GAME_SETTINGS.bgmVolume, 0, 1),
+      sfxVolume: this.clampNumber(settings.sfxVolume, DEFAULT_GAME_SETTINGS.sfxVolume, 0, 1),
+      bgmTrack: settings.bgmTrack || DEFAULT_GAME_SETTINGS.bgmTrack
+    };
+  }
+
+  readSettings() {
+    try {
+      return this.normalizeSettings(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}"));
+    } catch {
+      return this.normalizeSettings();
+    }
+  }
+
+  saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(this.state.settings));
+    } catch {
+      // Ignore storage failures in private or locked-down contexts.
+    }
+  }
+
+  readPreferences() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(PREFERENCES_STORAGE_KEY) || "{}");
+      return {
+        ...DEFAULT_PREFERENCES,
+        ...(stored && typeof stored === "object" ? stored : {})
+      };
+    } catch {
+      return { ...DEFAULT_PREFERENCES };
+    }
+  }
+
+  savePreferences() {
+    try {
+      localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify({
+        levelId: this.state.levelId,
+        laneCount: this.activeLaneCount()
+      }));
+    } catch {
+      // Ignore storage failures in private or locked-down contexts.
+    }
+  }
+
+  readPlayCounts() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(PLAY_COUNTS_STORAGE_KEY) || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  savePlayCounts() {
+    try {
+      localStorage.setItem(PLAY_COUNTS_STORAGE_KEY, JSON.stringify(this.state.playCounts));
+    } catch {
+      // Ignore storage failures in private or locked-down contexts.
+    }
+  }
+
+  createSeed() {
+    let seed = (Date.now() ^ Math.floor(performance.now() * 1000) ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    if (globalThis.crypto?.getRandomValues) {
+      const values = new Uint32Array(2);
+      globalThis.crypto.getRandomValues(values);
+      seed = (seed ^ values[0] ^ Math.imul(values[1], 2654435761)) >>> 0;
+    }
+    return seed || 1;
   }
 
   nextRandom() {
@@ -153,7 +299,7 @@ export class VocabSprintGame {
 
   readTheme() {
     try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      const stored = localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem(OLD_THEME_STORAGE_KEY);
       return stored === "light" ? "light" : "dark";
     } catch {
       return "dark";
@@ -184,25 +330,230 @@ export class VocabSprintGame {
     this.drawBoard();
   }
 
+  formatPercent(value) {
+    return `${Math.round(this.clampNumber(value, 0, 0, 1) * 100)}%`;
+  }
+
+  formatPlayTime(seconds) {
+    const total = Math.max(0, Math.floor(seconds));
+    const minutes = Math.floor(total / 60);
+    return `${minutes}:${String(total % 60).padStart(2, "0")}`;
+  }
+
+  playCountFor(levelId) {
+    return Math.max(0, Number(this.state.playCounts[levelId]) || 0);
+  }
+
+  incrementPlayCount(levelId) {
+    this.state.playCounts[levelId] = this.playCountFor(levelId) + 1;
+    this.savePlayCounts();
+    this.renderLevelPicker();
+  }
+
+  populateBgmTracks() {
+    this.ui.bgmTrack.innerHTML = "";
+
+    const random = document.createElement("option");
+    random.value = "random";
+    random.textContent = "ランダム再生";
+    this.ui.bgmTrack.appendChild(random);
+
+    for (const track of BGM_TRACKS) {
+      const option = document.createElement("option");
+      option.value = track.id;
+      option.textContent = track.label;
+      this.ui.bgmTrack.appendChild(option);
+    }
+
+    if (!BGM_TRACKS.some((track) => track.id === this.state.settings.bgmTrack)) {
+      this.state.settings.bgmTrack = "random";
+      this.saveSettings();
+    }
+  }
+
+  syncSettingsInputs() {
+    const settings = this.state.settings;
+    this.ui.correctTime.value = String(settings.correctTimeBonus);
+    this.ui.streakTime.value = String(settings.streakTimeMultiplier);
+    this.ui.wrongTime.value = String(settings.wrongTimePenalty);
+    this.ui.bgmEnabled.checked = settings.bgmEnabled;
+    this.ui.sfxEnabled.checked = settings.sfxEnabled;
+    this.ui.bgmVolume.value = String(settings.bgmVolume);
+    this.ui.sfxVolume.value = String(settings.sfxVolume);
+    this.ui.bgmVolumeValue.textContent = this.formatPercent(settings.bgmVolume);
+    this.ui.sfxVolumeValue.textContent = this.formatPercent(settings.sfxVolume);
+    this.ui.bgmTrack.value = settings.bgmTrack;
+  }
+
+  applySettingsFromInputs() {
+    const next = this.normalizeSettings({
+      ...this.state.settings,
+      correctTimeBonus: this.ui.correctTime.value,
+      streakTimeMultiplier: this.ui.streakTime.value,
+      wrongTimePenalty: this.ui.wrongTime.value,
+      bgmEnabled: this.ui.bgmEnabled.checked,
+      sfxEnabled: this.ui.sfxEnabled.checked,
+      bgmVolume: this.ui.bgmVolume.value,
+      sfxVolume: this.ui.sfxVolume.value,
+      bgmTrack: this.ui.bgmTrack.value
+    });
+    this.state.settings = next;
+    this.syncSettingsInputs();
+    this.saveSettings();
+    this.audio.applySettings(() => this.state.phase);
+    this.updateUi();
+  }
+
+  renderLevelPicker() {
+    const level = this.activeLevel();
+    this.ui.levelButtonLabel.textContent = level.label;
+    this.ui.levelButtonMeta.textContent = `${this.playCountFor(level.id)}回`;
+    this.ui.levelMenu.innerHTML = "";
+
+    for (const item of LEVELS) {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "level-option";
+      option.dataset.level = item.id;
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", item.id === this.state.levelId ? "true" : "false");
+      option.classList.toggle("active", item.id === this.state.levelId);
+
+      const name = document.createElement("span");
+      name.className = "level-option-name";
+      name.textContent = item.label;
+
+      const count = document.createElement("span");
+      count.className = "level-option-count";
+      count.textContent = `${this.playCountFor(item.id)}回`;
+
+      option.append(name, count);
+      option.addEventListener("click", () => this.selectLevel(item.id));
+      this.ui.levelMenu.appendChild(option);
+    }
+  }
+
+  positionLevelMenu() {
+    if (!this.state.levelMenuOpen) {
+      return;
+    }
+    const margin = 8;
+    const gap = 7;
+    const rect = this.ui.levelButton.getBoundingClientRect();
+    const viewportWidth = globalThis.innerWidth || document.documentElement.clientWidth || 390;
+    const viewportHeight = globalThis.innerHeight || document.documentElement.clientHeight || 720;
+    const width = Math.min(Math.max(rect.width, 260), viewportWidth - margin * 2);
+    const left = Math.max(margin, Math.min(rect.left, viewportWidth - width - margin));
+    const belowTop = rect.bottom + gap;
+    const belowHeight = viewportHeight - belowTop - margin;
+    const aboveHeight = rect.top - gap - margin;
+    const useAbove = belowHeight < 180 && aboveHeight > belowHeight;
+    const maxHeight = Math.max(160, Math.min(430, useAbove ? aboveHeight : belowHeight));
+    const top = useAbove ? Math.max(margin, rect.top - gap - maxHeight) : belowTop;
+
+    this.ui.levelMenu.style.setProperty("--level-menu-left", `${left}px`);
+    this.ui.levelMenu.style.setProperty("--level-menu-top", `${top}px`);
+    this.ui.levelMenu.style.setProperty("--level-menu-width", `${width}px`);
+    this.ui.levelMenu.style.setProperty("--level-menu-max-height", `${maxHeight}px`);
+  }
+
+  portalLevelMenu() {
+    if (this.ui.levelMenu.parentElement !== document.body) {
+      document.body.appendChild(this.ui.levelMenu);
+    }
+  }
+
+  restoreLevelMenu() {
+    if (this.ui.levelPicker && this.ui.levelMenu.parentElement !== this.ui.levelPicker) {
+      this.ui.levelPicker.appendChild(this.ui.levelMenu);
+    }
+  }
+
+  setLevelMenuOpen(isOpen) {
+    this.state.levelMenuOpen = Boolean(isOpen);
+    if (this.state.levelMenuOpen) {
+      this.portalLevelMenu();
+    }
+    this.ui.levelButton.setAttribute("aria-expanded", String(this.state.levelMenuOpen));
+    this.ui.levelMenu.classList.toggle("floating", this.state.levelMenuOpen);
+    this.ui.levelMenu.classList.toggle("hidden", !this.state.levelMenuOpen);
+    if (this.state.levelMenuOpen) {
+      this.positionLevelMenu();
+      requestAnimationFrame(() => this.positionLevelMenu());
+    } else {
+      this.restoreLevelMenu();
+    }
+  }
+
+  toggleLevelMenu() {
+    if (this.ui.levelButton.disabled) {
+      return;
+    }
+    this.setSoundPanelOpen(false);
+    this.setLevelMenuOpen(!this.state.levelMenuOpen);
+  }
+
+  selectLevel(levelId) {
+    if (!LEVEL_MAP.has(levelId)) {
+      return;
+    }
+    this.ui.level.value = levelId;
+    this.setLevelMenuOpen(false);
+    this.state.levelId = levelId;
+    this.savePreferences();
+    if (this.state.phase === "ready" || this.state.phase === "over" || this.state.phase === "error") {
+      this.loadLevel(levelId, { resultMode: this.state.phase === "over" });
+    } else {
+      this.renderLevelPicker();
+      this.updateTitleDetails();
+    }
+  }
+
+  setSoundPanelOpen(isOpen) {
+    this.state.soundPanelOpen = Boolean(isOpen);
+    this.ui.soundButton.setAttribute("aria-expanded", String(this.state.soundPanelOpen));
+    this.ui.soundPanel.classList.toggle("hidden", !this.state.soundPanelOpen);
+  }
+
+  toggleSoundPanel() {
+    this.setLevelMenuOpen(false);
+    this.setSoundPanelOpen(!this.state.soundPanelOpen);
+  }
+
+  updateTitleDetails() {
+    const level = this.activeLevel();
+    this.ui.currentLevel.textContent = `${level.label}（${this.playCountFor(level.id)}回プレイ）`;
+    this.ui.currentLane.textContent = `${this.activeLaneCount()}レーン`;
+  }
+
   cssVar(name, fallback) {
     return getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
   }
 
-  async loadLevel(levelId) {
+  async loadLevel(levelId, options = {}) {
     const level = LEVEL_MAP.get(levelId);
     if (!level) {
       return;
     }
+    const stayOnResult = Boolean(options.resultMode);
 
     const token = ++this.loadToken;
     this.audio.stopBgm();
     this.state.phase = "loading";
     this.state.levelId = levelId;
+    this.ui.level.value = levelId;
     this.state.words = [];
     this.state.lanes = [];
     this.state.effects = [];
     this.state.loadError = "";
-    this.showOverlay("Vocab Sprint", "Loading", "Start");
+    this.savePreferences();
+    this.renderLevelPicker();
+    this.showOverlay(stayOnResult ? "Result" : APP_TITLE, "Loading", stayOnResult ? "Restart" : "Start", {
+      showTitleDetails: true,
+      obscureBoard: !stayOnResult,
+      resultMode: stayOnResult,
+      titleMode: !stayOnResult
+    });
     this.updateUi();
     this.drawBoard();
 
@@ -212,16 +563,23 @@ export class VocabSprintGame {
         return;
       }
       this.state.words = words;
-      this.state.phase = "ready";
+      this.state.phase = stayOnResult ? "over" : "ready";
       this.state.best = this.readBest();
-      this.state.timeLeft = RUN_TIME;
+      this.state.timeLeft = stayOnResult ? 0 : RUN_TIME;
       this.state.elapsed = 0;
-      this.state.feedback = [];
-      this.state.review = new Map();
+      if (!stayOnResult) {
+        this.state.feedback = [];
+        this.state.review = new Map();
+      }
       this.state.recent = [];
+      this.resetWordBag();
       this.makeLanes();
       this.renderFeed();
-      this.showOverlay("Vocab Sprint", this.modeLabel(), "Start");
+      if (stayOnResult) {
+        this.showResultOverlay();
+      } else {
+        this.showTitleOverlay();
+      }
       this.updateUi();
       this.renderAnswerButtons();
       this.drawBoard();
@@ -231,7 +589,7 @@ export class VocabSprintGame {
       }
       this.state.phase = "error";
       this.state.loadError = error instanceof Error ? error.message : String(error);
-      this.showOverlay("読み込みエラー", "ローカルサーバーで開いてください", "Start");
+      this.showOverlay("読み込みエラー", "ローカルサーバーで開いてください", "Start", { showTitleDetails: false });
       this.updateUi();
       this.renderAnswerButtons();
       this.drawBoard();
@@ -270,13 +628,30 @@ export class VocabSprintGame {
     };
   }
 
+  cardSizeForLane(laneWidth) {
+    const lanes = this.activeLaneCount();
+    const cardGap = laneWidth < 130 ? 8 : laneWidth < 180 ? 14 : 24;
+    const maxCardWidth = lanes === 1 ? 420 : lanes === 2 ? 340 : 282;
+    return {
+      width: Math.max(58, Math.min(laneWidth - cardGap, maxCardWidth)),
+      height: lanes === 1 ? 88 : lanes === 2 ? 78 : laneWidth < 130 ? 76 : 70
+    };
+  }
+
   missLineY(size = this.canvasSize()) {
-    const offset = Math.max(38, Math.min(MISS_LINE_OFFSET, size.height * 0.18));
-    return Math.max(24, size.height - offset);
+    const laneWidth = size.width / this.activeLaneCount();
+    const cardHeight = this.cardSizeForLane(laneWidth).height;
+    const bottomInset = Math.max(18, Math.min(46, size.height * 0.08));
+    return Math.max(CARD_START_Y + 40, size.height - bottomInset - cardHeight);
+  }
+
+  guideLineY(size = this.canvasSize()) {
+    const laneWidth = size.width / this.activeLaneCount();
+    return this.missLineY(size) + this.cardSizeForLane(laneWidth).height;
   }
 
   fallDistance(size = this.canvasSize()) {
-    return Math.max(1, this.missLineY(size));
+    return Math.max(1, this.missLineY(size) - CARD_START_Y);
   }
 
   fallHeightScale(size = this.canvasSize()) {
@@ -297,14 +672,61 @@ export class VocabSprintGame {
     }
   }
 
-  chooseWord() {
-    const words = this.state.words;
-    let candidate = words[this.randInt(0, words.length - 1)];
-    for (let i = 0; i < 24 && this.state.recent.includes(candidate.english); i += 1) {
-      candidate = words[this.randInt(0, words.length - 1)];
+  recentWindowSize() {
+    const words = this.state.words.length;
+    if (words <= 3) {
+      return Math.max(0, words - 1);
     }
+    return Math.min(24, Math.max(9, this.activeLaneCount() * 5, Math.floor(words * 0.12)));
+  }
+
+  resetWordBag() {
+    this.state.wordBag = this.shuffle(this.state.words);
+  }
+
+  chooseWord(excludedWords = []) {
+    const words = this.state.words;
+    if (!words.length) {
+      return null;
+    }
+    if (words.length === 1) {
+      return words[0];
+    }
+
+    if (!this.state.wordBag.length) {
+      this.resetWordBag();
+    }
+
+    const blocked = new Set([
+      ...this.state.recent,
+      ...excludedWords.filter(Boolean)
+    ]);
+    const deferred = [];
+    let candidate = null;
+    const tries = Math.max(words.length, this.state.wordBag.length);
+
+    for (let i = 0; i < tries; i += 1) {
+      const next = this.state.wordBag.shift();
+      if (!next) {
+        if (!this.state.wordBag.length) {
+          this.resetWordBag();
+        }
+        continue;
+      }
+      if (!blocked.has(next.english)) {
+        candidate = next;
+        break;
+      }
+      deferred.push(next);
+    }
+
+    if (!candidate) {
+      candidate = deferred.shift() || this.state.wordBag.shift() || words[this.randInt(0, words.length - 1)];
+    }
+
+    this.state.wordBag.push(...deferred);
     this.state.recent.push(candidate.english);
-    this.state.recent = this.state.recent.slice(-9);
+    this.state.recent = this.state.recent.slice(-this.recentWindowSize());
     return candidate;
   }
 
@@ -326,15 +748,26 @@ export class VocabSprintGame {
     if (!this.state.words.length) {
       return;
     }
-    const word = this.chooseWord();
+    const activeWords = this.state.lanes
+      .filter((lane) => lane && lane.index !== index)
+      .map((lane) => lane.word?.english)
+      .filter(Boolean);
+    const word = this.chooseWord(activeWords);
+    if (!word) {
+      return;
+    }
     const options = this.makeOptions(word.japanese);
-    const startY = startAbove ? -56 - this.randInt(0, 76) : -34 - this.randInt(0, 44);
+    const startY = CARD_START_Y + (startAbove ? this.randInt(0, 20) : this.randInt(0, 12));
     this.state.lanes[index] = {
       index,
       word,
       options,
       y: startY,
       startY,
+      age: 0,
+      fadeOut: 0,
+      fadeDuration: 0,
+      fadeKind: "",
       shake: 0,
       flash: "",
       flashTime: 0,
@@ -349,7 +782,8 @@ export class VocabSprintGame {
     }
     for (let i = 0; i < this.activeLaneCount(); i += 1) {
       this.spawnLane(i, true);
-      this.state.lanes[i].y -= i * 58;
+      this.state.lanes[i].y += i * 18;
+      this.state.lanes[i].startY = this.state.lanes[i].y;
     }
   }
 
@@ -399,6 +833,60 @@ export class VocabSprintGame {
     });
   }
 
+  startLaneFade(lane, kind, duration = CARD_FADE_OUT_TIME) {
+    lane.fadeKind = kind;
+    lane.fadeDuration = duration;
+    lane.fadeOut = duration;
+  }
+
+  cardMetrics(lane, laneWidth) {
+    const laneX = lane.index * laneWidth;
+    const { width: cardWidth, height: cardHeight } = this.cardSizeForLane(laneWidth);
+    const x = laneX + (laneWidth - cardWidth) / 2 + (lane.shake ? Math.sin(performance.now() / 28) * lane.shake : 0);
+    return { x, y: lane.y, width: cardWidth, height: cardHeight };
+  }
+
+  addCardParticles(laneIndex, lane, kind) {
+    const size = this.canvasSize();
+    const laneWidth = size.width / this.activeLaneCount();
+    const card = this.cardMetrics(lane, laneWidth);
+    const count = kind === "correct" ? 24 : kind === "wrong" ? 20 : 18;
+    const colors = kind === "correct"
+      ? ["#8fc35d", "#f0ce6c", "#61bfd1"]
+      : kind === "wrong"
+        ? ["#df6557", "#f0ce6c", "#f1f4ee"]
+        : ["#f0ce6c", "#a7b3ad", "#61bfd1"];
+    const shapes = kind === "correct"
+      ? ["spark", "diamond", "ring", "dot"]
+      : kind === "wrong"
+        ? ["spark", "shard", "dot", "ring"]
+        : ["shard", "ring", "dot"];
+
+    for (let i = 0; i < count; i += 1) {
+      const angle = this.nextRandom() * Math.PI * 2;
+      const speed = (kind === "correct" ? 42 : 34) + this.nextRandom() * 48;
+      const edgeBias = i % 2 === 0 ? -0.42 : 0.42;
+      const x = card.x + card.width * (0.5 + edgeBias * this.nextRandom());
+      const y = card.y + card.height * (0.25 + this.nextRandom() * 0.55);
+      const life = 0.44 + this.nextRandom() * 0.26;
+      this.state.effects.push({
+        type: "particle",
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - (kind === "correct" ? 24 : 4),
+        gravity: kind === "miss" ? 28 : 18,
+        radius: 2 + this.nextRandom() * 2.8,
+        shape: shapes[this.randInt(0, shapes.length - 1)],
+        angle: this.nextRandom() * Math.PI * 2,
+        spin: (this.nextRandom() - 0.5) * 8,
+        color: colors[this.randInt(0, colors.length - 1)],
+        life,
+        maxLife: life
+      });
+    }
+  }
+
   renderReviewList() {
     this.ui.reviewList.innerHTML = "";
     if (!this.state.review.size) {
@@ -417,17 +905,60 @@ export class VocabSprintGame {
     for (const item of this.state.review.values()) {
       const row = document.createElement("div");
       row.className = "review-item";
-      const english = document.createElement("span");
+      const english = document.createElement("strong");
+      english.className = "review-word";
       english.textContent = item.count > 1 ? `${item.english} x${item.count}` : item.english;
       const japanese = document.createElement("span");
+      japanese.className = "review-meaning";
       japanese.textContent = item.japanese;
-      row.append(english, japanese);
+      const links = document.createElement("span");
+      links.className = "review-links";
+      const encoded = encodeURIComponent(item.english);
+      const eijiro = document.createElement("a");
+      eijiro.href = `https://eow.alc.co.jp/search?q=${encoded}`;
+      eijiro.target = "_blank";
+      eijiro.rel = "noopener noreferrer";
+      eijiro.textContent = "英辞郎";
+      eijiro.addEventListener("click", (event) => {
+        event.preventDefault();
+        this.openReferenceModal(`英辞郎: ${item.english}`, eijiro.href);
+      });
+      const youglish = document.createElement("a");
+      youglish.href = `https://youglish.com/pronounce/${encoded}/english`;
+      youglish.target = "_blank";
+      youglish.rel = "noopener noreferrer";
+      youglish.textContent = "YouGlish";
+      youglish.addEventListener("click", (event) => {
+        event.preventDefault();
+        this.openReferenceModal(`YouGlish: ${item.english}`, youglish.href, {
+          kind: "youglish",
+          query: item.english
+        });
+      });
+      links.append(eijiro, youglish);
+      row.append(english, japanese, links);
       this.ui.reviewList.appendChild(row);
     }
   }
 
   modeLabel() {
     return `${this.activeLevel().label} / ${this.activeLaneCount()}レーン`;
+  }
+
+  answerTextSizeClass(text) {
+    const score = Array.from(text || "").reduce((total, character) => {
+      return total + (/^[\x00-\x7F]$/.test(character) ? 0.55 : 1);
+    }, 0);
+    const lanes = this.activeLaneCount();
+    const longAt = lanes === 1 ? 14 : lanes === 2 ? 10 : 7.5;
+    const veryLongAt = lanes === 1 ? 20 : lanes === 2 ? 14 : 10.5;
+    if (score >= veryLongAt) {
+      return "text-very-long";
+    }
+    if (score >= longAt) {
+      return "text-long";
+    }
+    return "";
   }
 
   renderAnswerButtons() {
@@ -471,7 +1002,12 @@ export class VocabSprintGame {
         key.textContent = LANE_KEYS[laneIndex][optionIndex];
         const word = document.createElement("span");
         word.className = "word";
-        word.textContent = lane ? lane.options[optionIndex] : "";
+        const optionText = lane ? lane.options[optionIndex] : "";
+        const sizeClass = this.answerTextSizeClass(optionText);
+        if (sizeClass) {
+          word.classList.add(sizeClass);
+        }
+        word.textContent = optionText;
         button.append(key, word);
         button.addEventListener("click", () => this.answer(laneIndex, optionIndex));
         panel.appendChild(button);
@@ -485,10 +1021,11 @@ export class VocabSprintGame {
       return;
     }
     this.audio.init();
-    const seedBase = Date.now() ^ Math.floor(Math.random() * 0xffffffff);
-    this.state.rngSeed = seedBase >>> 0;
+    this.state.rngSeed = this.createSeed();
     this.state.phase = "playing";
-    this.state.laneCount = Number(this.ui.laneCount.value) || DEFAULT_LANES;
+    this.state.laneCount = this.clampLaneCount(this.ui.laneCount.value);
+    this.savePreferences();
+    this.incrementPlayCount(this.state.levelId);
     this.state.score = 0;
     this.state.best = this.readBest();
     this.state.streak = 0;
@@ -501,8 +1038,11 @@ export class VocabSprintGame {
     this.state.review = new Map();
     this.state.effects = [];
     this.state.recent = [];
+    this.resetWordBag();
     this.state.lastTime = performance.now();
     this.makeLanes();
+    this.setLevelMenuOpen(false);
+    this.setSoundPanelOpen(false);
     this.hideOverlay();
     this.addFeed(`${this.modeLabel()} / Start`);
     this.audio.playSfx("start");
@@ -516,20 +1056,19 @@ export class VocabSprintGame {
       return;
     }
     this.state.phase = "over";
-    this.audio.stopBgm();
+    this.audio.fadeOutBgm(1200);
     this.saveBest();
-    this.showOverlay("Time Up", `Score ${this.state.score} / Best ${this.state.best}`, "Again");
-    this.renderReviewList();
+    this.showResultOverlay({ fadeIn: true });
     this.addFeed(`Finish: ${this.state.score}`);
     this.audio.playSfx("finish");
     this.updateUi();
     this.renderAnswerButtons();
   }
 
-  resetGame() {
+  returnToTitle() {
     this.audio.stopBgm();
     this.state.phase = this.state.words.length ? "ready" : "loading";
-    this.state.laneCount = Number(this.ui.laneCount.value) || DEFAULT_LANES;
+    this.state.laneCount = this.clampLaneCount(this.ui.laneCount.value);
     this.state.score = 0;
     this.state.best = this.readBest();
     this.state.streak = 0;
@@ -542,10 +1081,12 @@ export class VocabSprintGame {
     this.state.review = new Map();
     this.state.effects = [];
     this.state.recent = [];
+    this.resetWordBag();
     this.state.lastTime = performance.now();
     this.makeLanes();
     this.renderFeed();
-    this.showOverlay("Vocab Sprint", this.modeLabel(), "Start");
+    this.setSoundPanelOpen(false);
+    this.showTitleOverlay();
     this.updateUi();
     this.renderAnswerButtons();
     this.drawBoard();
@@ -555,7 +1096,11 @@ export class VocabSprintGame {
     if (this.state.phase === "playing") {
       this.state.phase = "paused";
       this.audio.stopBgm();
-      this.showOverlay("Paused", `Score ${this.state.score}`, "Resume");
+      this.showOverlay("Paused", `Score ${this.state.score}`, "Resume", {
+        showTitleDetails: true,
+        obscureBoard: true,
+        pauseMode: true
+      });
     } else if (this.state.phase === "paused") {
       this.state.phase = "playing";
       this.state.lastTime = performance.now();
@@ -564,20 +1109,6 @@ export class VocabSprintGame {
     }
     this.updateUi();
     this.renderAnswerButtons();
-  }
-
-  toggleAudio() {
-    this.state.audioEnabled = !this.state.audioEnabled;
-    if (this.state.audioEnabled) {
-      this.audio.init();
-      this.audio.playSfx("toggle");
-      if (this.state.phase === "playing") {
-        this.audio.startBgm(() => this.state.phase);
-      }
-    } else {
-      this.audio.stopBgm();
-    }
-    this.updateUi();
   }
 
   speedNow() {
@@ -590,7 +1121,7 @@ export class VocabSprintGame {
 
   formatTimeDelta(delta) {
     const sign = delta >= 0 ? "+" : "-";
-    const value = Math.abs(delta).toFixed(1).replace(/\.0$/, "");
+    const value = Math.abs(delta).toFixed(3).replace(/\.?0+$/, "");
     return `${sign}${value}s`;
   }
 
@@ -622,9 +1153,12 @@ export class VocabSprintGame {
       const size = this.canvasSize();
       const bottomBonus = Math.max(0, Math.round((1 - lane.y / (size.height - 92)) * 40));
       const gain = 100 + this.activeLevel().bonus + bottomBonus + Math.min(90, this.state.streak * 3);
-      const timeBonus = CORRECT_TIME_BONUS + this.state.streak * STREAK_TIME_BONUS;
+      const timeBonus = this.state.settings.correctTimeBonus
+        + this.state.streak * this.state.settings.streakTimeMultiplier;
       this.state.score += gain;
       this.adjustTime(timeBonus);
+      this.startLaneFade(lane, "correct", CARD_FADE_OUT_TIME);
+      this.addCardParticles(laneIndex, lane, "correct");
       this.audio.playSfx("correct");
       this.state.effects.push({ lane: laneIndex, text: `+${gain}`, y: lane.y, life: 0.7, color: "#8fc35d" });
       this.state.effects.push({ lane: laneIndex, text: this.formatTimeDelta(timeBonus), y: lane.y + 24, life: 0.7, color: "#f0ce6c" });
@@ -634,7 +1168,7 @@ export class VocabSprintGame {
           this.spawnLane(laneIndex, true);
           this.renderAnswerButtons();
         }
-      }, 120);
+      }, CARD_FADE_OUT_TIME * 1000);
     } else {
       lane.locked = true;
       this.state.wrong += 1;
@@ -645,16 +1179,19 @@ export class VocabSprintGame {
       lane.flashTime = 0.22;
       this.addReview(lane.word, picked, "wrong");
       this.showAnswerReveal(laneIndex, lane);
+      this.startLaneFade(lane, "wrong", CARD_FADE_OUT_TIME + 0.08);
+      this.addCardParticles(laneIndex, lane, "wrong");
       this.audio.playSfx("wrong");
-      this.state.effects.push({ lane: laneIndex, text: `-20 ${this.formatTimeDelta(-WRONG_TIME_PENALTY)}`, y: lane.y, life: 0.55, color: "#df6557" });
-      this.addFeed(`${lane.word.english}: 正解は ${lane.word.japanese} / ${this.formatTimeDelta(-WRONG_TIME_PENALTY)}`);
-      this.adjustTime(-WRONG_TIME_PENALTY);
+      const penalty = this.state.settings.wrongTimePenalty;
+      this.state.effects.push({ lane: laneIndex, text: `-20 ${this.formatTimeDelta(-penalty)}`, y: lane.y, life: 0.55, color: "#df6557" });
+      this.addFeed(`${lane.word.english}: 正解は ${lane.word.japanese} / ${this.formatTimeDelta(-penalty)}`);
+      this.adjustTime(-penalty);
       setTimeout(() => {
         if (this.state.phase === "playing") {
           this.spawnLane(laneIndex, true);
           this.renderAnswerButtons();
         }
-      }, 180);
+      }, (CARD_FADE_OUT_TIME + 0.08) * 1000);
     }
     this.updateUi();
     this.renderAnswerButtons();
@@ -673,10 +1210,13 @@ export class VocabSprintGame {
     this.state.score = Math.max(0, this.state.score - 35);
     this.addReview(lane.word, null, "miss");
     this.showAnswerReveal(laneIndex, lane);
+    this.startLaneFade(lane, "miss", ANSWER_REVEAL_TIME);
+    this.addCardParticles(laneIndex, lane, "miss");
     this.audio.playSfx("miss");
-    this.state.effects.push({ lane: laneIndex, text: `MISS ${this.formatTimeDelta(-WRONG_TIME_PENALTY)}`, y: this.missLineY(this.canvasSize()) + 8, life: 0.65, color: "#e0b34e" });
-    this.addFeed(`${lane.word.english} = ${lane.word.japanese} / ${this.formatTimeDelta(-WRONG_TIME_PENALTY)}`);
-    this.adjustTime(-WRONG_TIME_PENALTY);
+    const penalty = this.state.settings.wrongTimePenalty;
+    this.state.effects.push({ lane: laneIndex, text: `MISS ${this.formatTimeDelta(-penalty)}`, y: this.guideLineY(this.canvasSize()) - 16, life: 0.65, color: "#e0b34e" });
+    this.addFeed(`${lane.word.english} = ${lane.word.japanese} / ${this.formatTimeDelta(-penalty)}`);
+    this.adjustTime(-penalty);
     setTimeout(() => {
       if (this.state.phase === "playing" && this.state.lanes[laneIndex] === lane) {
         this.spawnLane(laneIndex, true);
@@ -703,6 +1243,8 @@ export class VocabSprintGame {
     const speed = this.speedNow();
     for (let i = 0; i < this.state.lanes.length; i += 1) {
       const lane = this.state.lanes[i];
+      lane.age += dt;
+      lane.fadeOut = Math.max(0, lane.fadeOut - dt);
       lane.shake = Math.max(0, lane.shake - 38 * dt);
       lane.flashTime = Math.max(0, lane.flashTime - dt);
       if (lane.locked) {
@@ -716,9 +1258,76 @@ export class VocabSprintGame {
 
     for (const effect of this.state.effects) {
       effect.life -= dt;
-      effect.y -= 26 * dt;
+      if (effect.type === "particle") {
+        effect.x += effect.vx * dt;
+        effect.y += effect.vy * dt;
+        effect.vy += (effect.gravity || 0) * dt;
+        effect.angle += (effect.spin || 0) * dt;
+      } else {
+        effect.y -= 26 * dt;
+      }
     }
     this.state.effects = this.state.effects.filter((effect) => effect.life > 0);
+  }
+
+  drawLaneFlow(x, laneWidth, height, laneIndex, flow, now) {
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = "source-over";
+    this.ctx.fillStyle = flow.shade;
+    this.ctx.fillRect(x, 0, laneWidth, height);
+
+    const phase = now * 0.00112 + laneIndex * 0.9;
+    const slowPhase = now * 0.00078 + laneIndex * 1.35;
+    const verticalDrift = Math.sin(phase * 1.18) * height * 0.24;
+    const transparent = "rgba(255, 255, 255, 0)";
+    const diagonal = this.ctx.createLinearGradient(
+      x + laneWidth * (0.08 + Math.sin(phase) * 0.3),
+      -height * 0.34 + verticalDrift,
+      x + laneWidth * (1.12 + Math.cos(slowPhase) * 0.32),
+      height * 1.28 + Math.cos(phase * 0.8) * height * 0.2
+    );
+    diagonal.addColorStop(0, transparent);
+    diagonal.addColorStop(0.22, flow.coolMid);
+    diagonal.addColorStop(0.48, flow.warmMid);
+    diagonal.addColorStop(0.72, flow.greenSoft);
+    diagonal.addColorStop(1, flow.coolSoft);
+    this.ctx.fillStyle = diagonal;
+    this.ctx.fillRect(x, 0, laneWidth, height);
+
+    const cross = this.ctx.createLinearGradient(
+      x + laneWidth * (0.9 + Math.sin(slowPhase * 0.8) * 0.28),
+      height * (1.08 + Math.cos(phase) * 0.12),
+      x + laneWidth * (0.1 + Math.cos(slowPhase) * 0.24),
+      -height * 0.18
+    );
+    cross.addColorStop(0, transparent);
+    cross.addColorStop(0.34, flow.warmSoft);
+    cross.addColorStop(0.58, flow.coolStrong);
+    cross.addColorStop(1, flow.coolSoft);
+    this.ctx.fillStyle = cross;
+    this.ctx.fillRect(x, 0, laneWidth, height);
+
+    for (let blob = 0; blob < 3; blob += 1) {
+      const blobPhase = phase + slowPhase * 0.65 + blob * Math.PI * 0.72;
+      const cx = x + laneWidth * (0.5 + Math.sin(blobPhase * 1.17) * 0.52);
+      const cy = height * (0.5 + Math.cos(blobPhase * 0.93) * 0.5);
+      const radius = Math.max(laneWidth * (1.1 + blob * 0.2), height * (0.42 + blob * 0.08));
+      const glow = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      glow.addColorStop(0, blob % 2 ? flow.warmMid : flow.coolStrong);
+      glow.addColorStop(0.42, blob % 2 ? flow.greenSoft : flow.coolMid);
+      glow.addColorStop(1, transparent);
+      this.ctx.fillStyle = glow;
+      this.ctx.fillRect(x, 0, laneWidth, height);
+    }
+
+    const veil = this.ctx.createLinearGradient(x, 0, x, height);
+    veil.addColorStop(0, flow.finish);
+    veil.addColorStop(0.52, transparent);
+    veil.addColorStop(1, flow.finish);
+    this.ctx.fillStyle = veil;
+    this.ctx.fillRect(x, 0, laneWidth, height);
+
+    this.ctx.restore();
   }
 
   drawBoard() {
@@ -730,16 +1339,28 @@ export class VocabSprintGame {
     const missLine = this.cssVar("--miss-line", "rgba(224, 179, 78, 0.16)");
     const boardLabel = this.cssVar("--board-label", "rgba(241, 244, 238, 0.16)");
     const edgeLine = this.cssVar("--edge-line", "rgba(97, 191, 209, 0.28)");
+    const flow = {
+      coolSoft: this.cssVar("--lane-flow-cool-soft", "rgba(97, 191, 209, 0.05)"),
+      coolMid: this.cssVar("--lane-flow-cool-mid", "rgba(97, 191, 209, 0.1)"),
+      coolStrong: this.cssVar("--lane-flow-cool-strong", "rgba(97, 191, 209, 0.14)"),
+      warmSoft: this.cssVar("--lane-flow-warm-soft", "rgba(240, 206, 108, 0.04)"),
+      warmMid: this.cssVar("--lane-flow-warm-mid", "rgba(240, 206, 108, 0.075)"),
+      greenSoft: this.cssVar("--lane-flow-green-soft", "rgba(143, 195, 93, 0.075)"),
+      shade: this.cssVar("--lane-flow-shade", "rgba(0, 0, 0, 0.22)"),
+      finish: this.cssVar("--lane-flow-finish", "rgba(0, 0, 0, 0.1)")
+    };
     this.ctx.clearRect(0, 0, size.width, size.height);
     this.ctx.fillStyle = canvasBg;
     this.ctx.fillRect(0, 0, size.width, size.height);
 
     const lanes = this.activeLaneCount();
     const laneWidth = size.width / lanes;
+    const now = performance.now();
     for (let i = 0; i < lanes; i += 1) {
       const x = i * laneWidth;
       this.ctx.fillStyle = i % 2 === 0 ? laneBgA : laneBgB;
       this.ctx.fillRect(x, 0, laneWidth, size.height);
+      this.drawLaneFlow(x, laneWidth, size.height, i, flow, now);
 
       this.ctx.strokeStyle = laneLine;
       this.ctx.lineWidth = 1;
@@ -748,8 +1369,9 @@ export class VocabSprintGame {
       this.ctx.lineTo(x, size.height);
       this.ctx.stroke();
 
+      const guideThickness = laneWidth < 140 ? 3 : 4;
       this.ctx.fillStyle = missLine;
-      this.ctx.fillRect(x + 12, this.missLineY(size) + 20, laneWidth - 24, 2);
+      this.ctx.fillRect(x + 12, this.guideLineY(size) - guideThickness / 2, laneWidth - 24, guideThickness);
 
       this.ctx.fillStyle = boardLabel;
       this.ctx.font = "800 12px system-ui, sans-serif";
@@ -907,26 +1529,31 @@ export class VocabSprintGame {
   }
 
   drawWords(laneWidth) {
-    const cardBg = this.cssVar("--card-bg", "#eef6f1");
-    const cardText = this.cssVar("--card-text", "#101416");
+    const cardBg = this.cssVar("--card-bg", "rgba(6, 10, 11, 0.58)");
+    const cardText = this.cssVar("--card-text", "#f1f4ee");
     const cyan = this.cssVar("--cyan", "#61bfd1");
     const green = this.cssVar("--green", "#8fc35d");
     for (const lane of this.state.lanes) {
       if (!lane) {
         continue;
       }
-      const laneX = lane.index * laneWidth;
       const lanes = this.activeLaneCount();
-      const cardGap = laneWidth < 130 ? 8 : laneWidth < 180 ? 14 : 24;
-      const maxCardWidth = lanes === 1 ? 420 : lanes === 2 ? 340 : 282;
-      const cardWidth = Math.max(58, Math.min(laneWidth - cardGap, maxCardWidth));
-      const cardHeight = lanes === 1 ? 88 : lanes === 2 ? 78 : laneWidth < 130 ? 76 : 70;
-      const x = laneX + (laneWidth - cardWidth) / 2 + (lane.shake ? Math.sin(performance.now() / 28) * lane.shake : 0);
-      const y = lane.y;
+      const card = this.cardMetrics(lane, laneWidth);
+      const fadeInAlpha = Math.max(0, Math.min(1, lane.age / CARD_FADE_IN_TIME));
+      const fadeOutAlpha = lane.fadeDuration ? Math.max(0, Math.min(1, lane.fadeOut / lane.fadeDuration)) : 1;
+      const alpha = fadeInAlpha * fadeOutAlpha;
+      if (alpha <= 0.01) {
+        continue;
+      }
+      const x = card.x;
+      const y = card.y + (lane.fadeKind ? (1 - fadeOutAlpha) * -4 : (1 - fadeInAlpha) * -6);
+      const cardWidth = card.width;
+      const cardHeight = card.height;
       const pulse = lane.flash === "correct" && lane.flashTime > 0 ? 1 : 0;
       const glow = pulse ? "rgba(143, 195, 93, 0.52)" : "rgba(97, 191, 209, 0.22)";
 
       this.ctx.save();
+      this.ctx.globalAlpha = alpha;
       this.ctx.shadowColor = glow;
       this.ctx.shadowBlur = 18;
       this.roundRect(x, y, cardWidth, cardHeight, 8);
@@ -942,7 +1569,8 @@ export class VocabSprintGame {
       const maxFont = lanes === 1 ? 46 : lanes === 2 ? 40 : 35;
       const minBaseFont = lanes === 1 ? 30 : lanes === 2 ? 27 : 24;
       const baseFont = Math.max(minBaseFont, Math.min(maxFont, cardWidth * 0.34));
-      const textLayout = this.layoutCanvasText(lane.word.english, textMaxWidth, cardHeight - 18, baseFont, maxLines, 12);
+      const minFont = lanes === 1 ? 18 : lanes === 2 ? 16 : 14;
+      const textLayout = this.layoutCanvasText(lane.word.english, textMaxWidth, cardHeight - 18, baseFont, maxLines, minFont);
       this.ctx.fillStyle = cardText;
       this.setCanvasFont(textLayout.size);
       this.ctx.textAlign = "center";
@@ -960,10 +1588,45 @@ export class VocabSprintGame {
     const gold = this.cssVar("--gold", "#f0ce6c");
     for (const effect of this.state.effects) {
       const alpha = Math.max(0, Math.min(1, effect.life / (effect.maxLife || 0.7)));
-      const laneCenter = effect.lane * laneWidth + laneWidth / 2;
       this.ctx.save();
       this.ctx.globalAlpha = alpha;
-      if (effect.type === "reveal") {
+      if (effect.type === "particle") {
+        const radius = effect.radius || 3;
+        this.ctx.translate(effect.x, effect.y);
+        this.ctx.rotate(effect.angle || 0);
+        this.ctx.fillStyle = effect.color;
+        this.ctx.strokeStyle = effect.color;
+        this.ctx.shadowColor = effect.color;
+        this.ctx.shadowBlur = effect.shape === "spark" ? 12 : 8;
+        if (effect.shape === "spark") {
+          this.ctx.lineWidth = Math.max(1.1, radius * 0.48);
+          this.ctx.beginPath();
+          this.ctx.moveTo(-radius * 2.4, 0);
+          this.ctx.lineTo(radius * 2.4, 0);
+          this.ctx.moveTo(0, -radius * 1.25);
+          this.ctx.lineTo(0, radius * 1.25);
+          this.ctx.stroke();
+        } else if (effect.shape === "diamond" || effect.shape === "shard") {
+          const stretch = effect.shape === "shard" ? 2.2 : 1.35;
+          this.ctx.beginPath();
+          this.ctx.moveTo(0, -radius * stretch);
+          this.ctx.lineTo(radius * 0.95, 0);
+          this.ctx.lineTo(0, radius * stretch);
+          this.ctx.lineTo(-radius * 0.95, 0);
+          this.ctx.closePath();
+          this.ctx.fill();
+        } else if (effect.shape === "ring") {
+          this.ctx.lineWidth = Math.max(1, radius * 0.42);
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, radius * 1.7, 0, Math.PI * 2);
+          this.ctx.stroke();
+        } else {
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+      } else if (effect.type === "reveal") {
+        const laneCenter = effect.lane * laneWidth + laneWidth / 2;
         const progress = 1 - alpha;
         const scale = 0.88 + Math.sin(Math.min(1, progress * 1.2) * Math.PI) * 0.38;
         const lanes = this.activeLaneCount();
@@ -993,6 +1656,7 @@ export class VocabSprintGame {
           this.ctx.fillText(textLayout.lines[i], laneCenter, textTop + textLayout.lineHeight * (i + 0.5) + 1);
         }
       } else {
+        const laneCenter = effect.lane * laneWidth + laneWidth / 2;
         this.ctx.fillStyle = effect.color;
         this.ctx.font = "950 22px system-ui, sans-serif";
         this.ctx.textAlign = "center";
@@ -1003,16 +1667,103 @@ export class VocabSprintGame {
     }
   }
 
-  showOverlay(title, copy, buttonText) {
+  showTitleOverlay() {
+    this.updateTitleDetails();
+    this.syncSettingsInputs();
+    this.showOverlay(APP_TITLE, "", "Start", {
+      showTitleDetails: true,
+      showBack: false,
+      obscureBoard: true,
+      titleMode: true
+    });
+  }
+
+  showResultOverlay(options = {}) {
+    this.updateTitleDetails();
+    this.syncSettingsInputs();
+    this.showOverlay("Result", `Score ${this.state.score} / Best ${this.state.best}`, "Restart", {
+      showBack: false,
+      showTitleDetails: true,
+      resultMode: true,
+      fadeIn: Boolean(options.fadeIn)
+    });
+    this.renderReviewList();
+  }
+
+  showOverlay(title, copy, buttonText, options = {}) {
     this.ui.overlayTitle.textContent = title;
     this.ui.overlayCopy.textContent = copy;
     this.ui.reviewList.innerHTML = "";
     this.ui.startButton.textContent = buttonText;
+    this.ui.titleDetails.classList.toggle("hidden", !options.showTitleDetails);
+    this.ui.overlayBackButton.classList.toggle("hidden", !options.showBack);
+    this.ui.gameShell.classList.toggle("is-obscured", Boolean(options.obscureBoard));
+    this.ui.overlay.classList.toggle("result-mode", Boolean(options.resultMode));
+    this.ui.overlay.classList.toggle("title-mode", Boolean(options.titleMode));
+    this.ui.overlay.classList.toggle("pause-mode", Boolean(options.pauseMode));
+    this.ui.overlay.classList.remove("fade-in");
+    if (options.fadeIn) {
+      this.ui.overlay.offsetHeight;
+      this.ui.overlay.classList.add("fade-in");
+    }
     this.ui.overlay.classList.add("show");
   }
 
   hideOverlay() {
     this.ui.overlay.classList.remove("show");
+    this.ui.overlay.classList.remove("fade-in", "result-mode", "title-mode", "pause-mode");
+    this.ui.gameShell.classList.remove("is-obscured");
+  }
+
+  escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  youglishWidgetHtml(query) {
+    const escapedQuery = this.escapeHtml(query);
+    return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html, body { height: 100%; margin: 0; background: #fff; color: #172022; font-family: system-ui, sans-serif; }
+    body { display: grid; min-height: 100%; }
+    .youglish-widget { display: block; min-height: 100%; }
+  </style>
+</head>
+<body>
+  <a id="yg-widget-0" class="youglish-widget" data-query="${escapedQuery}" data-lang="english" data-components="8415" data-bkg-color="theme_light" data-restricted="1" rel="nofollow" href="https://youglish.com">Visit YouGlish.com</a>
+  <script async src="https://youglish.com/public/emb/widget.js" charset="utf-8"></script>
+</body>
+</html>`;
+  }
+
+  openReferenceModal(title, url, options = {}) {
+    this.setLevelMenuOpen(false);
+    this.setSoundPanelOpen(false);
+    this.ui.linkModalTitle.textContent = title;
+    this.ui.linkModalOpen.href = url;
+    if (options.kind === "youglish") {
+      this.ui.linkModalFrame.removeAttribute("src");
+      this.ui.linkModalFrame.srcdoc = this.youglishWidgetHtml(options.query || title);
+    } else {
+      this.ui.linkModalFrame.removeAttribute("srcdoc");
+      this.ui.linkModalFrame.src = url;
+    }
+    this.ui.linkModal.classList.remove("hidden");
+    this.ui.linkModal.setAttribute("aria-hidden", "false");
+  }
+
+  closeReferenceModal() {
+    this.ui.linkModal.classList.add("hidden");
+    this.ui.linkModal.setAttribute("aria-hidden", "true");
+    this.ui.linkModalFrame.removeAttribute("srcdoc");
+    this.ui.linkModalFrame.src = "about:blank";
   }
 
   accuracy() {
@@ -1040,6 +1791,7 @@ export class VocabSprintGame {
     this.ui.levelLabel.textContent = `${level.label} / ${this.activeLaneCount()}L`;
     this.ui.laneCount.value = String(this.activeLaneCount());
     this.ui.time.textContent = String(Math.ceil(Math.max(0, this.state.timeLeft))).padStart(2, "0");
+    this.ui.elapsed.textContent = this.formatPlayTime(this.state.elapsed);
     this.ui.timeBar.style.width = `${Math.max(0, Math.min(100, (this.state.timeLeft / RUN_TIME) * 100))}%`;
     this.ui.score.textContent = String(this.state.score);
     this.ui.best.textContent = String(Math.max(this.state.best, this.state.score));
@@ -1056,15 +1808,19 @@ export class VocabSprintGame {
     this.ui.pauseButton.setAttribute("aria-label", this.ui.pauseButton.title);
     this.ui.pauseIcon.classList.toggle("hidden", this.state.phase === "paused");
     this.ui.playIcon.classList.toggle("hidden", this.state.phase !== "paused");
-    this.ui.soundButton.title = this.state.audioEnabled ? "サウンド ON" : "サウンド OFF";
+    const audioOn = this.state.settings.bgmEnabled || this.state.settings.sfxEnabled;
+    this.ui.soundButton.title = "音設定";
     this.ui.soundButton.setAttribute("aria-label", this.ui.soundButton.title);
-    this.ui.soundOnIcon.classList.toggle("hidden", !this.state.audioEnabled);
-    this.ui.soundOffIcon.classList.toggle("hidden", this.state.audioEnabled);
+    this.ui.soundOnIcon.classList.toggle("hidden", !audioOn);
+    this.ui.soundOffIcon.classList.toggle("hidden", audioOn);
     this.ui.themeLightIcon?.classList.toggle("hidden", this.state.theme === "light");
     this.ui.themeDarkIcon?.classList.toggle("hidden", this.state.theme !== "light");
     this.ui.level.disabled = this.state.phase === "playing" || this.state.phase === "paused" || isBusy;
+    this.ui.levelButton.disabled = this.ui.level.disabled;
     this.ui.laneCount.disabled = this.state.phase === "playing" || this.state.phase === "paused" || isBusy;
+    this.ui.backButton.disabled = isBusy;
     this.ui.startButton.disabled = isBusy || isError || !this.state.words.length;
+    this.updateTitleDetails();
   }
 
   gameLoop(now) {
@@ -1086,6 +1842,14 @@ export class VocabSprintGame {
     return null;
   }
 
+  isTypingTarget(target) {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+    return target.isContentEditable
+      || target.matches("input, select, textarea");
+  }
+
   attachEvents() {
     this.ui.startButton.addEventListener("click", () => {
       if (this.state.phase === "paused") {
@@ -1094,33 +1858,79 @@ export class VocabSprintGame {
         this.startGame();
       }
     });
-    this.ui.restartButton.addEventListener("click", () => this.resetGame());
-    this.ui.soundButton.addEventListener("click", () => this.toggleAudio());
+    this.ui.overlayBackButton.addEventListener("click", () => this.returnToTitle());
+    this.ui.backButton.addEventListener("click", () => this.returnToTitle());
+    this.ui.levelButton.addEventListener("click", () => this.toggleLevelMenu());
+    this.ui.linkModalClose.addEventListener("click", () => this.closeReferenceModal());
+    this.ui.linkModal.addEventListener("click", (event) => {
+      if (event.target === this.ui.linkModal) {
+        this.closeReferenceModal();
+      }
+    });
+    this.ui.soundButton.addEventListener("click", () => this.toggleSoundPanel());
     this.ui.themeButton?.addEventListener("click", () => this.toggleTheme());
     this.ui.pauseButton.addEventListener("click", () => this.pauseGame());
+    for (const input of [this.ui.correctTime, this.ui.streakTime, this.ui.wrongTime]) {
+      input.addEventListener("input", () => this.applySettingsFromInputs());
+      input.addEventListener("change", () => this.applySettingsFromInputs());
+    }
+    for (const input of [this.ui.bgmEnabled, this.ui.bgmVolume, this.ui.bgmTrack, this.ui.sfxEnabled, this.ui.sfxVolume]) {
+      input.addEventListener("input", () => this.applySettingsFromInputs());
+      input.addEventListener("change", () => this.applySettingsFromInputs());
+    }
     this.ui.level.addEventListener("change", () => {
       if (this.state.phase === "ready" || this.state.phase === "over" || this.state.phase === "error") {
-        this.loadLevel(this.ui.level.value);
+        this.loadLevel(this.ui.level.value, { resultMode: this.state.phase === "over" });
       }
     });
     this.ui.laneCount.addEventListener("change", () => {
       if (this.state.phase === "ready" || this.state.phase === "over") {
-        this.state.laneCount = Number(this.ui.laneCount.value) || DEFAULT_LANES;
+        const stayOnResult = this.state.phase === "over";
+        this.state.laneCount = this.clampLaneCount(this.ui.laneCount.value);
+        this.savePreferences();
         this.state.best = this.readBest();
         this.state.effects = [];
         this.makeLanes();
         this.updateUi();
         this.renderAnswerButtons();
         this.drawBoard();
-        this.showOverlay("Vocab Sprint", this.modeLabel(), "Start");
+        if (stayOnResult) {
+          this.showResultOverlay();
+        } else {
+          this.showTitleOverlay();
+        }
+      }
+    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".level-picker") && !event.target.closest("#levelMenu")) {
+        this.setLevelMenuOpen(false);
+      }
+      if (!event.target.closest(".sound-control")) {
+        this.setSoundPanelOpen(false);
       }
     });
     window.addEventListener("resize", () => {
       this.resizeCanvas();
+      this.positionLevelMenu();
       this.drawBoard();
     });
+    this.ui.overlayScroll.addEventListener("scroll", () => this.positionLevelMenu());
     window.addEventListener("keydown", (event) => {
       const key = event.key.toLowerCase();
+      if (key === "escape" && !this.ui.linkModal.classList.contains("hidden")) {
+        event.preventDefault();
+        this.closeReferenceModal();
+        return;
+      }
+      if (key === "escape" && (this.state.levelMenuOpen || this.state.soundPanelOpen)) {
+        event.preventDefault();
+        this.setLevelMenuOpen(false);
+        this.setSoundPanelOpen(false);
+        return;
+      }
+      if (this.isTypingTarget(event.target)) {
+        return;
+      }
       const mapped = this.keyToLane(key);
       if (mapped) {
         event.preventDefault();
